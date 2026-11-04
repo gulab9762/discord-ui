@@ -174,9 +174,11 @@ export function setupSyncServer(httpServer) {
           const { seatId, user } = payload;
 
           if (user && seatId) {
+            let previousSeatId = null;
             // Free any previous seat for this user
             for (const [sId, sUser] of Object.entries(room.seats)) {
               if (sUser.id === user.id) {
+                previousSeatId = sId;
                 delete room.seats[sId];
               }
             }
@@ -187,10 +189,49 @@ export function setupSyncServer(httpServer) {
               seatId
             };
 
+            // If changing seats, inform other clients of seat-to-seat movement
+            if (previousSeatId && previousSeatId !== seatId) {
+              broadcastToRoom(room, {
+                type: 'GUEST_SEAT_MOVE',
+                payload: { fromSeatId: previousSeatId, targetSeatId: seatId, user }
+              }, ws);
+            }
+
             broadcastToRoom(room, {
               type: 'STATE_UPDATE',
               payload: { seats: room.seats }
             });
+          }
+        }
+
+        if (type === 'MOVE_SEAT') {
+          const room = getOrCreateRoom(currentInstanceId);
+          const { fromSeatId, targetSeatId, user } = payload;
+
+          if (user && targetSeatId) {
+            // Free any previous seat for this user
+            for (const [sId, sUser] of Object.entries(room.seats)) {
+              if (sUser.id === user.id || sId === fromSeatId) {
+                delete room.seats[sId];
+              }
+            }
+
+            // Assign new seat
+            room.seats[targetSeatId] = {
+              ...user,
+              seatId: targetSeatId
+            };
+
+            // Broadcast walking animation between chairs to other clients
+            broadcastToRoom(room, {
+              type: 'GUEST_SEAT_MOVE',
+              payload: { fromSeatId, targetSeatId, user }
+            }, ws);
+
+            broadcastToRoom(room, {
+              type: 'STATE_UPDATE',
+              payload: { seats: room.seats }
+            }, ws);
           }
         }
 

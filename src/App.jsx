@@ -80,9 +80,20 @@ export default function App() {
   const [isEmbedded, setIsEmbedded] = useState(false);
 
   // Active current user (retrieved dynamically from Discord)
-  const [currentUser, setCurrentUser] = useState(getStoredDiscordUser());
+  const [currentUser, setCurrentUser] = useState(() => {
+    return (
+      getStoredDiscordUser() || {
+        id: 'local-user',
+        name: 'Guest Traveler',
+        avatar: 'https://cdn.discordapp.com/embed/avatars/0.png',
+        role: 'You',
+        roleColor: '#faa61a'
+      }
+    );
+  });
   const [enteringGuest, setEnteringGuest] = useState(null);
   const [leavingGuest, setLeavingGuest] = useState(null);
+  const [movingGuest, setMovingGuest] = useState(null);
   const [notification, setNotification] = useState(`Welcome to the ${theme.name}! 🌴`);
 
   const voiceSpeakingRef = useRef(new Set());
@@ -209,6 +220,21 @@ export default function App() {
         }
       }
 
+      // Live seat-to-seat movement from another connected player
+      if (type === 'GUEST_SEAT_MOVE') {
+        const { fromSeatId, targetSeatId, user } = payload;
+        if (user && user.id !== currentUser?.id) {
+          setMovingGuest({
+            ...user,
+            fromSeatId,
+            targetSeatId,
+            seatId: targetSeatId
+          });
+          const targetSeatName = customSeats.find((s) => s.id === targetSeatId)?.name || 'another seat';
+          showNotification(`${user.name} is walking to ${targetSeatName}... 🚶‍♂️✨`);
+        }
+      }
+
       if (type === 'STATE_UPDATE') {
         if (payload?.seats) {
           const seatedList = Object.values(payload.seats).map((u) => ({
@@ -279,41 +305,66 @@ export default function App() {
   // Seating interactions (synchronized across all joined players)
   const handleSeatClick = (seat) => {
     if (isEditMode) return;
+    if (enteringGuest || leavingGuest || movingGuest) return;
+
     const vacantSeatId = seat.id;
     const seatedOccupant = members.find((m) => m.seatId === vacantSeatId);
 
     if (!seatedOccupant) {
       const userToSeat = currentUser || {
-        id: `local-${Date.now()}`,
+        id: 'local-user',
         name: 'Guest Traveler',
         avatar: 'https://cdn.discordapp.com/embed/avatars/0.png',
         role: 'You',
         roleColor: '#faa61a'
       };
 
-      const seatedMember = {
-        ...userToSeat,
-        seatId: vacantSeatId,
-        targetSeatId: vacantSeatId,
-        role: userToSeat.id === currentUser?.id ? 'You' : 'Member',
-        roleColor: '#faa61a',
-        status: 'online',
-        isSpeaking: voiceSpeakingRef.current.has(userToSeat.id)
-      };
+      // Check if user is already seated in another chair
+      const currentMember = members.find((m) => m.id === userToSeat.id && m.seatId);
 
-      // Trigger entrance animation from door to table
-      setEnteringGuest(seatedMember);
-      showNotification(`${userToSeat.name} is walking to ${seat.name}... 🪑`);
+      if (currentMember && currentMember.seatId !== vacantSeatId) {
+        // 1. SEAT CHANGE: Walk directly from current seat to target seat!
+        const fromSeatId = currentMember.seatId;
+        const movePayload = {
+          ...currentMember,
+          fromSeatId,
+          targetSeatId: vacantSeatId,
+          seatId: vacantSeatId,
+          isSpeaking: voiceSpeakingRef.current.has(userToSeat.id)
+        };
 
-      // Broadcast seat claim to all players
-      syncService.claimSeat(vacantSeatId, seatedMember);
+        // Immediately vacate old chair locally so occupant moves smoothly
+        setMembers((prev) => prev.filter((m) => m.seatId !== fromSeatId));
+
+        setMovingGuest(movePayload);
+        showNotification(`${userToSeat.name} is walking over to ${seat.name}... 🚶‍♂️✨`);
+
+        // Broadcast seat move to other players
+        syncService.moveSeat(fromSeatId, vacantSeatId, movePayload);
+      } else if (!currentMember) {
+        // 2. ENTRANCE: Walk in from the door to the chair!
+        const seatedMember = {
+          ...userToSeat,
+          seatId: vacantSeatId,
+          targetSeatId: vacantSeatId,
+          role: userToSeat.id === currentUser?.id ? 'You' : 'Member',
+          roleColor: '#faa61a',
+          status: 'online',
+          isSpeaking: voiceSpeakingRef.current.has(userToSeat.id)
+        };
+
+        setEnteringGuest(seatedMember);
+        showNotification(`${userToSeat.name} is walking to ${seat.name}... 🪑`);
+
+        syncService.claimSeat(vacantSeatId, seatedMember);
+      }
     }
   };
 
   // When a member is clicked to stand up and walk out the door
   const handleMemberClick = (member) => {
     if (isEditMode) return;
-    if (leavingGuest || enteringGuest) return;
+    if (leavingGuest || enteringGuest || movingGuest) return;
 
     // Remove from local and broadcast
     syncService.leaveSeat(member.seatId, member.id);
@@ -332,12 +383,44 @@ export default function App() {
 
   const handleGuestArrived = (guest) => {
     setEnteringGuest(null);
-    showNotification(`${guest.name} took a seat at ${customSeats.find((s) => s.id === guest.seatId)?.name || 'the table'}! 🪑✨`);
+    setMembers((prev) => {
+      const filtered = prev.filter((m) => m.id !== guest.id && m.seatId !== guest.targetSeatId);
+      return [
+        ...filtered,
+        {
+          ...guest,
+          seatId: guest.targetSeatId || guest.seatId,
+          targetSeatId: undefined
+        }
+      ];
+    });
+    const targetSeat = customSeats.find((s) => s.id === (guest.targetSeatId || guest.seatId));
+    showNotification(`${guest.name} took a seat at ${targetSeat?.name || 'the table'}! 🪑✨`);
+  };
+
+  const handleGuestMoved = (guest) => {
+    setMovingGuest(null);
+    setMembers((prev) => {
+      const filtered = prev.filter(
+        (m) => m.id !== guest.id && m.seatId !== guest.fromSeatId && m.seatId !== guest.targetSeatId
+      );
+      return [
+        ...filtered,
+        {
+          ...guest,
+          seatId: guest.targetSeatId,
+          fromSeatId: undefined,
+          targetSeatId: undefined
+        }
+      ];
+    });
+    const targetSeat = customSeats.find((s) => s.id === guest.targetSeatId);
+    showNotification(`${guest.name} sat down at ${targetSeat?.name || 'their new seat'}! 🪑✨`);
   };
 
   // When a new test guest enters through the door
   const handleAddMember = () => {
-    if (enteringGuest || leavingGuest) return;
+    if (enteringGuest || leavingGuest || movingGuest) return;
 
     const vacantSeats = customSeats.filter((s) => !members.some((m) => m.seatId === s.id));
     if (vacantSeats.length === 0) {
@@ -486,6 +569,8 @@ export default function App() {
           onGuestArrived={handleGuestArrived}
           leavingGuest={leavingGuest}
           onGuestDeparted={handleGuestDeparted}
+          movingGuest={movingGuest}
+          onGuestMoved={handleGuestMoved}
           staffList={staffList}
           onToggleStaffActive={handleToggleStaffActive}
           onChangeDish={handleChangeDish}

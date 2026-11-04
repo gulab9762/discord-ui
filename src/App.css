@@ -786,9 +786,22 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  transition: transform 1.3s cubic-bezier(0.25, 1, 0.5, 1);
+  transition: none;
   top: 0;
   left: 0;
+}
+
+.walking-guest-sprite.at-door,
+.walking-guest-sprite.at-chair {
+  transition: none;
+}
+
+.walking-guest-sprite.in-motion {
+  transition: transform 1.3s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.walking-guest-sprite.seat-changer-sprite {
+  z-index: 130;
 }
 
 .walker-avatar-body {

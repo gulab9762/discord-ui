@@ -98,6 +98,14 @@ class SyncService {
     });
   }
 
+  moveSeat(fromSeatId, targetSeatId, user) {
+    this.send({
+      type: 'MOVE_SEAT',
+      instanceId: this.instanceId,
+      payload: { fromSeatId, targetSeatId, user }
+    });
+  }
+
   leaveSeat(seatId, userId) {
     this.send({
       type: 'LEAVE_SEAT',

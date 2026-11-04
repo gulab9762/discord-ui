@@ -17,6 +17,8 @@ export default function LoungeRoom({
   onGuestArrived,
   leavingGuest,
   onGuestDeparted,
+  movingGuest,
+  onGuestMoved,
   staffList,
   onToggleStaffActive,
   onChangeDish,
@@ -32,6 +34,9 @@ export default function LoungeRoom({
 
   const [leavingPos, setLeavingPos] = useState(null);
   const [isLeavingWalking, setIsLeavingWalking] = useState(false);
+
+  const [movingPos, setMovingPos] = useState(null);
+  const [isMovingWalking, setIsMovingWalking] = useState(false);
 
   const roomRef = useRef(null);
   const doorRef = useRef(null);
@@ -131,7 +136,50 @@ export default function LoungeRoom({
     };
   }, [leavingGuest, currentSeats, doorConfig]);
 
-  // 3. INTERACTIVE DRAG & DROP FOR SEAT POSITIONS
+  // 3. DYNAMIC SEAT-TO-SEAT MOVE ANIMATION: FromSeat (x%, y%) ➜ TargetSeat (x%, y%)
+  useEffect(() => {
+    if (!movingGuest || !roomRef.current) return;
+
+    const fromSeat = currentSeats.find((s) => s.id === movingGuest.fromSeatId);
+    const targetSeat = currentSeats.find((s) => s.id === movingGuest.targetSeatId);
+
+    if (!targetSeat || !fromSeat) {
+      if (onGuestMoved) onGuestMoved(movingGuest);
+      return;
+    }
+
+    const roomRect = roomRef.current.getBoundingClientRect();
+    const startX = roomRect.width * (fromSeat.x / 100) - 24;
+    const startY = roomRect.height * (fromSeat.y / 100) - 24;
+
+    const targetX = roomRect.width * (targetSeat.x / 100) - 24;
+    const targetY = roomRect.height * (targetSeat.y / 100) - 24;
+
+    // Place instantly at origin seat first (without motion)
+    setMovingPos({ x: startX, y: startY });
+    setIsMovingWalking(false);
+
+    // After brief paint, start walking directly toward target seat
+    const walkTimer = setTimeout(() => {
+      setIsMovingWalking(true);
+      setMovingPos({ x: targetX, y: targetY });
+    }, 60);
+
+    const arriveTimer = setTimeout(() => {
+      setIsMovingWalking(false);
+      setMovingPos(null);
+      if (onGuestMoved) {
+        onGuestMoved(movingGuest);
+      }
+    }, 1400);
+
+    return () => {
+      clearTimeout(walkTimer);
+      clearTimeout(arriveTimer);
+    };
+  }, [movingGuest, currentSeats]);
+
+  // 4. INTERACTIVE DRAG & DROP FOR SEAT POSITIONS
   const handleSeatMouseDown = (e, seat) => {
     if (!isEditMode || !onUpdateSeatPos) return;
     e.preventDefault();
@@ -235,9 +283,37 @@ export default function LoungeRoom({
           </div>
         )}
 
+        {/* Seat-to-Seat Moving Guest Overlay */}
+        {movingGuest && movingPos && (
+          <div
+            className={`walking-guest-sprite seat-changer-sprite ${isMovingWalking ? 'in-motion' : 'at-chair'}`}
+            style={{
+              transform: `translate3d(${movingPos.x}px, ${movingPos.y}px, 0)`
+            }}
+            data-tooltip={`${movingGuest.name} changing seats`}
+            data-tooltip-pos="top"
+          >
+            <div className="walker-avatar-body">
+              <Avatar src={movingGuest.avatar} name={movingGuest.name} size={48} />
+              <div className="walking-shadow"></div>
+            </div>
+            <div className="walker-name-tag">
+              <span>{movingGuest.name}</span>
+            </div>
+          </div>
+        )}
+
         {/* 3. DYNAMIC SEATING SPOTS MAPPED TO THE THEME (DRAGGABLE IN EDIT MODE) */}
         {currentSeats.map((seat) => {
-          const occupant = members.find((m) => m.seatId === seat.id);
+          // Prevent showing duplicate stationary avatars during entry or seat-to-seat movement
+          const isTargetOfEntry = enteringGuest && enteringGuest.targetSeatId === seat.id;
+          const isTargetOfMove = movingGuest && movingGuest.targetSeatId === seat.id;
+          const isSourceOfMove = movingGuest && movingGuest.fromSeatId === seat.id;
+
+          let occupant = members.find((m) => m.seatId === seat.id);
+          if (isTargetOfEntry || isTargetOfMove || isSourceOfMove) {
+            occupant = null;
+          }
           const isOccupied = !!occupant;
 
           return (
