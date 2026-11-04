@@ -144,6 +144,9 @@ export default function LoungeRoom({
               <Avatar src={enteringGuest.avatar} name={enteringGuest.name} size={48} />
               <div className="walking-shadow"></div>
             </div>
+            <div className="walker-name-tag">
+              <span>{enteringGuest.name}</span>
+            </div>
           </div>
         )}
 
@@ -159,6 +162,9 @@ export default function LoungeRoom({
             <div className="walker-avatar-body">
               <Avatar src={leavingGuest.avatar} name={leavingGuest.name} size={48} />
               <div className="walking-shadow"></div>
+            </div>
+            <div className="walker-name-tag">
+              <span>{leavingGuest.name}</span>
             </div>
           </div>
         )}
@@ -196,6 +202,10 @@ export default function LoungeRoom({
                     {occupant.isSpeaking && <div className="speaking-wave-ring"></div>}
                     <Avatar src={occupant.avatar} name={occupant.name} size={46} />
                     <span className={`status-indicator ${occupant.status || 'online'}`}></span>
+                  </div>
+                  {/* Preserved Username Badge */}
+                  <div className="member-name">
+                    <span>{occupant.name}</span>
                   </div>
                 </div>
               ) : (
@@ -252,6 +262,11 @@ export default function LoungeRoom({
                   <span className="spatula-emoji">🥄</span>
                 </div>
               )}
+            </div>
+
+            {/* Preserved Chef Username Badge */}
+            <div className="chef-name-tag">
+              <span>{activeStaff.name}</span>
             </div>
           </div>
         )}

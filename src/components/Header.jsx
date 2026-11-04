@@ -27,7 +27,7 @@ export default function Header({
 
   return (
     <header className="header-bar jungle-header-bar">
-      {/* Brand & User Icon */}
+      {/* Brand & User Badge with Username */}
       <div className="header-left">
         <div 
           className="logo-icon-wrap jungle-logo-wrap"
@@ -37,14 +37,16 @@ export default function Header({
           <Trees className="logo-icon" size={20} />
         </div>
 
-        {/* User indicator icon */}
-        <div 
-          className="user-indicator-badge"
-          data-tooltip={userTooltip}
-          data-tooltip-align="left"
-        >
-          <span className="dot user-online-dot"></span>
-        </div>
+        {currentUserName && (
+          <div 
+            className="header-user-badge"
+            data-tooltip={userTooltip}
+            data-tooltip-align="left"
+          >
+            <span className="dot user-online-dot"></span>
+            <span className="header-username">{currentUserName}</span>
+          </div>
+        )}
       </div>
 
       {/* Stats Icons */}
