@@ -18,8 +18,17 @@ export default defineConfig({
   ],
   server: {
     host: '0.0.0.0',
-    port: 5173,
+    port: process.env.PORT ? parseInt(process.env.PORT) : 5173,
     allowedHosts: true, // Allows Discord proxy (*.discordsays.com) and Cloudflare tunnels
+    cors: true,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+    }
+  },
+  preview: {
+    host: '0.0.0.0',
+    port: process.env.PORT ? parseInt(process.env.PORT) : 5173,
+    allowedHosts: true,
     cors: true,
     headers: {
       'Access-Control-Allow-Origin': '*',
