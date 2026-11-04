@@ -1,0 +1,741 @@
+/* App Container & Background */
+.app-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  background: radial-gradient(circle at 20% 20%, #172317 0%, #0d140e 100%);
+  overflow-x: hidden;
+  overflow-y: auto;
+  font-family: 'gg sans', 'Segoe UI', Helvetica, Arial, sans-serif;
+  color: var(--text-primary);
+}
+
+/* Ambient Particles (Jungle Fireflies & Spores) */
+.ambient-particles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.particle {
+  position: absolute;
+  color: rgba(163, 230, 53, 0.35);
+  font-size: 13px;
+  animation: floatAmbient 7s ease-in-out infinite;
+}
+
+.part-1 { top: 15%; left: 8%; animation-delay: 0s; }
+.part-2 { top: 40%; left: 75%; animation-delay: 2s; }
+.part-3 { top: 75%; left: 20%; animation-delay: 4s; }
+.part-4 { top: 25%; left: 55%; animation-delay: 1.5s; }
+.part-5 { top: 85%; left: 65%; animation-delay: 3.5s; }
+
+@keyframes floatAmbient {
+  0%, 100% { transform: translateY(0px) rotate(0deg); opacity: 0.2; }
+  50% { transform: translateY(-20px) rotate(45deg); opacity: 0.7; }
+}
+
+/* Header Bar */
+.header-bar {
+  position: relative;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 18px;
+  background-color: rgba(22, 33, 22, 0.94);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(74, 222, 128, 0.15);
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+}
+
+.logo-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.jungle-logo-wrap {
+  width: 38px;
+  height: 38px;
+  background: linear-gradient(135deg, #15803d, #166534);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #86efac;
+  box-shadow: 0 4px 10px rgba(34, 197, 94, 0.3);
+}
+
+.header-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.header-subtitle {
+  font-size: 0.75rem;
+  color: #86efac;
+  opacity: 0.85;
+}
+
+.header-stats {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.stat-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background-color: rgba(13, 20, 14, 0.7);
+  border: 1px solid rgba(74, 222, 128, 0.2);
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-size: 0.8rem;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.lounge-dot { background-color: #22c55e; box-shadow: 0 0 8px #22c55e; }
+.kitchen-dot { background-color: #f97316; box-shadow: 0 0 8px #f97316; }
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.btn-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #1c2b1d;
+  color: var(--text-primary);
+  border: 1px solid rgba(74, 222, 128, 0.2);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-control:hover {
+  background-color: #283e2a;
+  transform: translateY(-1px);
+}
+
+.sound-btn.active {
+  background-color: rgba(34, 197, 94, 0.25);
+  border-color: #22c55e;
+  color: #4ade80;
+}
+
+.jungle-guest-btn {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.25), rgba(21, 128, 61, 0.2));
+  border-color: #22c55e;
+  color: #86efac;
+}
+
+.cook-toggle-btn {
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.25), rgba(234, 88, 12, 0.15));
+  border-color: #ea580c;
+  color: #fdba74;
+}
+
+.help-btn {
+  background-color: rgba(88, 101, 242, 0.2);
+  border-color: #5865f2;
+  color: #93a2f8;
+}
+
+/* Toast Notification */
+.toast-notification {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(22, 33, 22, 0.95);
+  border: 1px solid #4ade80;
+  color: #fff;
+  padding: 8px 18px;
+  border-radius: 30px;
+  font-size: 0.85rem;
+  z-index: 150;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 12px rgba(34, 197, 94, 0.3);
+  animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes popIn {
+  from { opacity: 0; transform: translate(-50%, 20px) scale(0.9); }
+  to { opacity: 1; transform: translate(-50%, 0) scale(1); }
+}
+
+/* ======================================================== */
+/* UNIFIED FULL-SCREEN JUNGLE CABIN CANVAS                  */
+/* ======================================================== */
+.server-stage-unified {
+  flex: 1;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  z-index: 2;
+}
+
+.jungle-cabin-full-room {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background-color: #141c15;
+  border: 1px solid rgba(74, 222, 128, 0.2);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6);
+}
+
+.jungle-banner {
+  padding: 10px 16px;
+  background: linear-gradient(90deg, rgba(22, 101, 52, 0.5), rgba(18, 30, 20, 0.7));
+  border-bottom: 1px solid rgba(74, 222, 128, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cabin-weather-tag {
+  font-size: 0.7rem;
+  color: #86efac;
+  background: rgba(13, 20, 14, 0.7);
+  padding: 3px 8px;
+  border-radius: 12px;
+  border: 1px solid rgba(74, 222, 128, 0.2);
+}
+
+.room-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.room-emoji {
+  font-size: 1.3rem;
+}
+
+.room-banner h3 {
+  font-size: 0.95rem;
+  color: #fff;
+}
+
+.room-desc {
+  font-size: 0.7rem;
+  color: #86efac;
+  opacity: 0.8;
+}
+
+/* ======================================================== */
+/* 2.5D BACKGROUND SCENE WITH INTEGRATED TABLES & KITCHEN   */
+/* ======================================================== */
+.jungle-unified-canvas {
+  flex: 1;
+  position: relative;
+  min-height: 560px;
+  background-image: url('/jungle-cabin-bg.jpg');
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
+  overflow: hidden;
+}
+
+.jungle-vignette-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 50%, transparent 50%, rgba(13, 20, 14, 0.35) 100%);
+  z-index: 1;
+}
+
+/* 1. Door Hotspot on Left Wall */
+.door-hotspot {
+  position: absolute;
+  z-index: 15;
+  transform: scale(0.9);
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.door-hotspot:hover {
+  transform: scale(0.94);
+}
+
+/* 2. Pinpoint Seating Spots around Tables */
+.table-seat-pinpoint {
+  position: absolute;
+  z-index: 10;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.table-seat-pinpoint:hover {
+  transform: translate(-50%, -55%);
+}
+
+.vacant-seat-marker {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: rgba(13, 20, 14, 0.5);
+  border: 2px dashed rgba(74, 222, 128, 0.5);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  transition: all 0.2s ease;
+}
+
+.vacant-seat-marker:hover {
+  background: rgba(34, 197, 94, 0.25);
+  border-color: #4ade80;
+  border-style: solid;
+  transform: scale(1.05);
+}
+
+.plus-icon {
+  font-size: 16px;
+  font-weight: bold;
+  color: #4ade80;
+  line-height: 1;
+}
+
+.marker-label {
+  font-size: 0.55rem;
+  font-weight: 700;
+  color: #86efac;
+  margin-top: 1px;
+}
+
+/* Occupant in Pinpoint */
+.pinpoint-occupant {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: dropIntoChair 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes dropIntoChair {
+  0% { transform: translateY(-16px) scale(0.9); opacity: 0; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+.avatar-frame {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: idleBob 3s ease-in-out infinite;
+}
+
+@keyframes idleBob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+.status-indicator {
+  position: absolute;
+  bottom: -1px;
+  right: -1px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid #141c15;
+  z-index: 3;
+}
+
+.status-indicator.online { background-color: #22c55e; }
+.status-indicator.idle { background-color: #f0b232; }
+
+.speaking-wave-ring {
+  position: absolute;
+  inset: -5px;
+  border-radius: 50%;
+  border: 2px solid #22c55e;
+  animation: speakingPulse 1.2s infinite;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.staff-ring {
+  border-color: #f59e0b;
+}
+
+@keyframes speakingPulse {
+  0% { transform: scale(0.95); opacity: 0.9; }
+  50% { transform: scale(1.2); opacity: 0.15; }
+  100% { transform: scale(0.95); opacity: 0.9; }
+}
+
+.member-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.member-name {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
+  max-width: 86px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+  background: rgba(13, 20, 14, 0.8);
+  padding: 1px 6px;
+  border-radius: 4px;
+  border: 1px solid rgba(74, 222, 128, 0.25);
+}
+
+.role-badge {
+  font-size: 0.58rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 8px;
+  border: 1px solid;
+  margin-top: 2px;
+}
+
+.mood-bubble {
+  position: absolute;
+  top: -18px;
+  background-color: rgba(13, 20, 14, 0.92);
+  border: 1px solid rgba(74, 222, 128, 0.3);
+  border-radius: 10px;
+  padding: 1px 6px;
+  font-size: 0.6rem;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+  max-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #86efac;
+}
+
+/* ======================================================== */
+/* 3. INTEGRATED CHEF STATION (FAR RIGHT KITCHEN AREA)      */
+/* ======================================================== */
+.chef-station-hotspot {
+  position: absolute;
+  z-index: 20;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.chef-avatar-wrapper {
+  position: relative;
+  width: 52px;
+  height: 52px;
+  min-width: 52px;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chef-hat-floater {
+  position: absolute;
+  top: -24px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #fff;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.7));
+  animation: chefHatWiggle 2s infinite ease-in-out;
+  z-index: 10;
+}
+
+@keyframes chefHatWiggle {
+  0%, 100% { transform: translateX(-50%) rotate(-6deg); }
+  50% { transform: translateX(-50%) rotate(6deg); }
+}
+
+.chef-spatula-hand {
+  position: absolute;
+  bottom: -4px;
+  right: -8px;
+  font-size: 18px;
+  animation: stirSpatula 1.2s infinite ease-in-out;
+  z-index: 6;
+}
+
+@keyframes stirSpatula {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(-25deg); }
+}
+
+.integrated-dish-bubble {
+  position: absolute;
+  top: -28px;
+  background-color: #f59e0b;
+  color: #111;
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 12px;
+  white-space: nowrap;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+  cursor: pointer;
+  z-index: 12;
+  animation: popIn 0.3s ease;
+}
+
+.cooking-sizzle-badge {
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #ea580c;
+  color: #fff;
+  font-size: 0.55rem;
+  font-weight: bold;
+  padding: 1px 5px;
+  border-radius: 6px;
+  text-transform: uppercase;
+  z-index: 5;
+}
+
+.compact-staff-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 6px;
+  background: rgba(13, 20, 14, 0.85);
+  padding: 2px 6px;
+  border-radius: 6px;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.mini-toggle {
+  margin-top: 4px;
+  font-size: 0.65rem;
+  padding: 2px 6px;
+  background: #f59e0b;
+  color: #000;
+  font-weight: bold;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+/* ======================================================== */
+/* 4. WALKING GUEST OVERLAYS                                */
+/* ======================================================== */
+.walking-guest-sprite {
+  position: absolute;
+  z-index: 120;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: transform 1.3s cubic-bezier(0.25, 1, 0.5, 1);
+  top: 0;
+  left: 0;
+}
+
+.walker-avatar-body {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.walking-guest-sprite.in-motion .walker-avatar-body {
+  animation: walkingBounce 0.35s infinite ease-in-out alternate;
+}
+
+@keyframes walkingBounce {
+  0% { transform: translateY(0) rotate(-4deg); }
+  100% { transform: translateY(-12px) rotate(4deg); }
+}
+
+.walking-shadow {
+  position: absolute;
+  bottom: -6px;
+  width: 38px;
+  height: 10px;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.6) 0%, transparent 70%);
+  border-radius: 50%;
+  animation: walkingShadowPulse 0.35s infinite ease-in-out alternate;
+}
+
+@keyframes walkingShadowPulse {
+  0% { transform: scale(1); opacity: 0.6; }
+  100% { transform: scale(0.7); opacity: 0.3; }
+}
+
+.walker-speech-bubble {
+  background-color: #22c55e;
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 10px;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+  animation: popIn 0.3s ease;
+}
+
+.walker-speech-bubble.leaving {
+  background-color: #ef4444;
+  color: #fff;
+}
+
+.walker-name-tag {
+  background: rgba(13, 20, 14, 0.9);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 6px;
+  margin-top: 4px;
+  white-space: nowrap;
+  border: 1px solid rgba(74, 222, 128, 0.3);
+}
+
+/* Door Sprite base */
+.lounge-door-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+}
+
+.door-arch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.door-frame {
+  width: 62px;
+  height: 94px;
+  background: #251b14;
+  border: 3px solid #483425;
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  perspective: 400px;
+  position: relative;
+}
+
+.door-panel {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #4d3727 0%, #362419 100%);
+  border: 2px solid #5a4130;
+  transform-origin: left;
+  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 6px;
+  position: relative;
+}
+
+.door-panel.open {
+  transform: rotateY(-70deg);
+  box-shadow: -4px 0 12px rgba(0, 0, 0, 0.6);
+}
+
+.door-molding.top {
+  height: 34px;
+  background: #2c1d14;
+  border: 1px solid #4a3424;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.frosted-glass-pane {
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 2px 6px;
+  border-radius: 2px;
+}
+
+.door-number {
+  font-size: 7px;
+  letter-spacing: 1px;
+  color: #ffdfba;
+  font-weight: bold;
+}
+
+.door-molding.bottom {
+  position: relative;
+  height: 36px;
+  background: #2c1d14;
+  border: 1px solid #4a3424;
+  border-radius: 4px;
+}
+
+.brass-handle {
+  position: absolute;
+  right: 5px;
+  top: 10px;
+  width: 6px;
+  height: 12px;
+  background: linear-gradient(180deg, #f59e0b 0%, #b45309 100%);
+  border-radius: 2px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
+}
+
+.keyhole {
+  position: absolute;
+  top: 14px;
+  right: 7px;
+  width: 2px;
+  height: 4px;
+  background: #111;
+  border-radius: 1px;
+}
+
+.door-mat {
+  background: #78350f;
+  border: 1px solid #92400e;
+  border-radius: 2px;
+  padding: 2px 8px;
+  font-size: 6px;
+  color: #fef3c7;
+  letter-spacing: 1px;
+  font-weight: bold;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  margin-top: 2px;
+}
