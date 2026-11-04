@@ -56,6 +56,8 @@ export default function App() {
       } catch {
         // ignore
       }
+      // Broadcast updated seat coordinates to all joined players in real time!
+      syncService.updateSeatLayout(updated);
       return updated;
     });
   };
@@ -67,6 +69,8 @@ export default function App() {
       // ignore
     }
     setCustomSeats(theme.layout.seats);
+    // Broadcast reset layout to all joined players
+    syncService.updateSeatLayout(theme.layout.seats);
     showNotification(`Reset ${theme.name} seat coordinates to defaults! ↺`);
   };
 
@@ -104,6 +108,8 @@ export default function App() {
     } catch {
       // ignore
     }
+    // Broadcast theme change & seat layout to all players
+    syncService.updateTheme(nextTheme.id, nextTheme.layout.seats);
     showNotification(`Switched theme to ${nextTheme.name} ${nextTheme.icon}! ✨`);
   };
 
@@ -117,8 +123,8 @@ export default function App() {
         applyDiscordUser(activeUser);
       }
 
-      // Connect to real-time sync server using Discord's instanceId
-      syncService.connect(res.instanceId || 'cabin-lounge', activeUser);
+      // Connect to real-time sync server with custom layout seats & theme
+      syncService.connect(res.instanceId || 'cabin-lounge', activeUser, customSeats, themeId);
     });
 
     // Subscribe to Discord live events (voice speaking, participants update)
@@ -128,7 +134,7 @@ export default function App() {
 
       if (state.currentUser) {
         applyDiscordUser(state.currentUser);
-        syncService.connect(state.instanceId || 'cabin-lounge', state.currentUser);
+        syncService.connect(state.instanceId || 'cabin-lounge', state.currentUser, customSeats, themeId);
       }
 
       // If Discord reports participants, sync their live voice speaking state & avatars
@@ -176,6 +182,30 @@ export default function App() {
         }
         if (payload?.staffList && payload.staffList.length > 0) {
           setStaffList(payload.staffList);
+        }
+        // Sync active seat layout & theme from server if present
+        if (payload?.layoutSeats && Array.isArray(payload.layoutSeats) && payload.layoutSeats.length > 0) {
+          setCustomSeats(payload.layoutSeats);
+        }
+        if (payload?.themeId && payload.themeId !== themeId) {
+          setThemeId(payload.themeId);
+        }
+      }
+
+      // Live seat coordinate updates from other players dragging chairs
+      if (type === 'SEAT_LAYOUT_UPDATE') {
+        if (payload?.layoutSeats && Array.isArray(payload.layoutSeats)) {
+          setCustomSeats(payload.layoutSeats);
+        }
+      }
+
+      // Live theme update from other player switching themes
+      if (type === 'THEME_UPDATE') {
+        if (payload?.themeId) {
+          setThemeId(payload.themeId);
+        }
+        if (payload?.layoutSeats && Array.isArray(payload.layoutSeats)) {
+          setCustomSeats(payload.layoutSeats);
         }
       }
 

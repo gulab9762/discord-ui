@@ -4,14 +4,18 @@ class SyncService {
     this.ws = null;
     this.instanceId = 'default-lounge';
     this.currentUser = null;
+    this.layoutSeats = null;
+    this.themeId = null;
     this.listeners = new Set();
     this.reconnectTimer = null;
     this.isConnected = false;
   }
 
-  connect(instanceId, user) {
+  connect(instanceId, user, layoutSeats = null, themeId = null) {
     if (instanceId) this.instanceId = instanceId;
     if (user) this.currentUser = user;
+    if (layoutSeats) this.layoutSeats = layoutSeats;
+    if (themeId) this.themeId = themeId;
 
     if (typeof window === 'undefined') return;
 
@@ -20,7 +24,11 @@ class SyncService {
         this.send({
           type: 'JOIN',
           instanceId: this.instanceId,
-          payload: { user: this.currentUser }
+          payload: {
+            user: this.currentUser,
+            layoutSeats: this.layoutSeats,
+            themeId: this.themeId
+          }
         });
       }
       return;
@@ -41,7 +49,11 @@ class SyncService {
           this.send({
             type: 'JOIN',
             instanceId: this.instanceId,
-            payload: { user: this.currentUser }
+            payload: {
+              user: this.currentUser,
+              layoutSeats: this.layoutSeats,
+              themeId: this.themeId
+            }
           });
         }
       };
@@ -60,7 +72,7 @@ class SyncService {
         // Reconnect after 2 seconds
         clearTimeout(this.reconnectTimer);
         this.reconnectTimer = setTimeout(() => {
-          this.connect(this.instanceId, this.currentUser);
+          this.connect(this.instanceId, this.currentUser, this.layoutSeats, this.themeId);
         }, 2000);
       };
 
@@ -102,6 +114,25 @@ class SyncService {
     });
   }
 
+  updateSeatLayout(layoutSeats) {
+    this.layoutSeats = layoutSeats;
+    this.send({
+      type: 'UPDATE_SEAT_LAYOUT',
+      instanceId: this.instanceId,
+      payload: { layoutSeats }
+    });
+  }
+
+  updateTheme(themeId, layoutSeats = null) {
+    this.themeId = themeId;
+    if (layoutSeats) this.layoutSeats = layoutSeats;
+    this.send({
+      type: 'UPDATE_THEME',
+      instanceId: this.instanceId,
+      payload: { themeId, layoutSeats }
+    });
+  }
+
   subscribe(callback) {
     this.listeners.add(callback);
     return () => this.listeners.delete(callback);
@@ -119,4 +150,3 @@ class SyncService {
 }
 
 export const syncService = new SyncService();
-

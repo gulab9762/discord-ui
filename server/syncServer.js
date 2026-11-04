@@ -5,13 +5,15 @@ export function setupSyncServer(httpServer) {
 
   const wss = new WebSocketServer({ noServer: true });
 
-  // Map of instanceId -> { instanceId, seats: {}, staffList: [], clients: Set<WebSocket> }
+  // Map of instanceId -> { instanceId, themeId, layoutSeats, seats: {}, staffList: [], clients: Set<WebSocket> }
   const rooms = new Map();
 
   function getOrCreateRoom(instanceId = 'default-lounge') {
     if (!rooms.has(instanceId)) {
       rooms.set(instanceId, {
         instanceId,
+        themeId: 'jungle-cabin',
+        layoutSeats: null, // stores custom dragged seat placements
         seats: {}, // seatId -> user
         staffList: [
           {
@@ -77,6 +79,14 @@ export function setupSyncServer(httpServer) {
           const room = getOrCreateRoom(currentInstanceId);
           room.clients.add(ws);
 
+          // If joining client has custom layout seats or theme, sync if room doesn't have it yet
+          if (payload?.layoutSeats && !room.layoutSeats) {
+            room.layoutSeats = payload.layoutSeats;
+          }
+          if (payload?.themeId && room.themeId === 'jungle-cabin') {
+            room.themeId = payload.themeId;
+          }
+
           // If this is the first real user joining and chef is generic, assign them as chef
           if (currentUser && room.clients.size === 1) {
             room.staffList[0] = {
@@ -91,8 +101,7 @@ export function setupSyncServer(httpServer) {
           // Automatically auto-seat user at next available chair if they don't have one
           const alreadySeated = Object.values(room.seats).some((u) => u.id === currentUser?.id);
           if (!alreadySeated && currentUser) {
-            // Find first available seat 1..8
-            for (let i = 1; i <= 8; i++) {
+            for (let i = 1; i <= 10; i++) {
               const seatId = `seat-${i}`;
               if (!room.seats[seatId]) {
                 room.seats[seatId] = {
@@ -109,7 +118,9 @@ export function setupSyncServer(httpServer) {
             type: 'INIT_STATE',
             payload: {
               seats: room.seats,
-              staffList: room.staffList
+              staffList: room.staffList,
+              layoutSeats: room.layoutSeats,
+              themeId: room.themeId
             }
           }));
 
@@ -126,6 +137,36 @@ export function setupSyncServer(httpServer) {
             type: 'PLAYER_JOINED',
             payload: { user: currentUser }
           }, ws);
+        }
+
+        // 1. UPDATE SEAT LAYOUT (Synchronizes dragged chair coordinates in real time)
+        if (type === 'UPDATE_SEAT_LAYOUT') {
+          const room = getOrCreateRoom(currentInstanceId);
+          if (payload?.layoutSeats) {
+            room.layoutSeats = payload.layoutSeats;
+            broadcastToRoom(room, {
+              type: 'SEAT_LAYOUT_UPDATE',
+              payload: { layoutSeats: room.layoutSeats }
+            });
+          }
+        }
+
+        // 2. UPDATE THEME (Synchronizes active theme across joined players)
+        if (type === 'UPDATE_THEME') {
+          const room = getOrCreateRoom(currentInstanceId);
+          if (payload?.themeId) {
+            room.themeId = payload.themeId;
+            if (payload?.layoutSeats) {
+              room.layoutSeats = payload.layoutSeats;
+            }
+            broadcastToRoom(room, {
+              type: 'THEME_UPDATE',
+              payload: {
+                themeId: room.themeId,
+                layoutSeats: room.layoutSeats
+              }
+            });
+          }
         }
 
         if (type === 'CLAIM_SEAT') {
@@ -235,4 +276,3 @@ export function setupSyncServer(httpServer) {
 
   console.log('[SyncServer] Real-time multiplayer synchronization WebSocket active on /sync-ws');
 }
-
