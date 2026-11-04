@@ -3,7 +3,12 @@ import Header from './components/Header';
 import LoungeRoom from './components/LoungeRoom';
 import SetupGuideModal from './components/SetupGuideModal';
 import { INITIAL_MEMBERS, INITIAL_STAFF } from './data/mockData';
-import { discordService, formatDiscordUser, getStoredDiscordUser, saveStoredDiscordUser } from './services/discordSdk';
+import {
+  discordService,
+  formatDiscordUser,
+  saveStoredDiscordUser,
+  getOrCreateLocalUser
+} from './services/discordSdk';
 import { syncService } from './services/syncService';
 import { THEME_LIST, getTheme, DEFAULT_THEME_ID } from './themes';
 import './App.css';
@@ -50,95 +55,31 @@ export default function App() {
   const currentSeats = customSeatsMap[theme.id] || theme.layout.seats;
   const currentChef = customChefMap[theme.id] || theme.layout.chefStation;
 
-  // Edit / Repositioning Mode Toggle
-  const [isEditMode, setIsEditMode] = useState(false);
-
-  const handleUpdateSeatPos = (seatId, newX, newY) => {
-    setCustomSeatsMap((prev) => {
-      const list = prev[theme.id] || theme.layout.seats;
-      const updated = list.map((s) => (s.id === seatId ? { ...s, x: newX, y: newY } : s));
-      try {
-        localStorage.setItem(`custom_seats_${theme.id}`, JSON.stringify(updated));
-      } catch {
-        // ignore
-      }
-      syncService.updateSeatLayout(theme.id, updated);
-      return {
-        ...prev,
-        [theme.id]: updated
-      };
-    });
-  };
-
-  const handleUpdateChefPos = (newX, newY, isCookingMode) => {
-    setCustomChefMap((prev) => {
-      const chef = prev[theme.id] || theme.layout.chefStation;
-      const updated = isCookingMode
-        ? {
-            ...chef,
-            cooking: { x: newX, y: newY },
-            break: { x: Number(Math.max(2, Math.min(98, newX - 11)).toFixed(1)), y: newY }
-          }
-        : {
-            ...chef,
-            break: { x: newX, y: newY }
-          };
-
-      try {
-        localStorage.setItem(`custom_chef_${theme.id}`, JSON.stringify(updated));
-      } catch {
-        // ignore
-      }
-
-      syncService.updateChefLayout(theme.id, updated);
-      return {
-        ...prev,
-        [theme.id]: updated
-      };
-    });
-  };
-
-  const handleResetSeats = () => {
-    try {
-      localStorage.removeItem(`custom_seats_${theme.id}`);
-      localStorage.removeItem(`custom_chef_${theme.id}`);
-    } catch {
-      // ignore
-    }
-    setCustomSeatsMap((prev) => ({
-      ...prev,
-      [theme.id]: theme.layout.seats
-    }));
-    setCustomChefMap((prev) => ({
-      ...prev,
-      [theme.id]: theme.layout.chefStation
-    }));
-    syncService.updateSeatLayout(theme.id, theme.layout.seats);
-    syncService.updateChefLayout(theme.id, theme.layout.chefStation);
-    showNotification(`Reset ${theme.name} seat & cook coordinates to defaults! ↺`);
-  };
-
+  // Active current user (supports Discord SDK as well as unique local session IDs)
+  const [currentUser, setCurrentUser] = useState(() => getOrCreateLocalUser());
   const [members, setMembers] = useState(INITIAL_MEMBERS);
   const [staffList, setStaffList] = useState(INITIAL_STAFF);
-  const [isGuideOpen, setIsGuideOpen] = useState(false);
-  const [isEmbedded, setIsEmbedded] = useState(false);
-
-  // Active current user (retrieved dynamically from Discord)
-  const [currentUser, setCurrentUser] = useState(() => {
-    return (
-      getStoredDiscordUser() || {
-        id: 'local-user',
-        name: 'Guest Traveler',
-        avatar: 'https://cdn.discordapp.com/embed/avatars/0.png',
-        role: 'You',
-        roleColor: '#faa61a'
-      }
-    );
-  });
   const [enteringGuest, setEnteringGuest] = useState(null);
   const [leavingGuest, setLeavingGuest] = useState(null);
   const [movingGuest, setMovingGuest] = useState(null);
   const [notification, setNotification] = useState(`Welcome to the ${theme.name}! 🌴`);
+
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [isGuideOpen, setIsGuideOpen] = useState(false);
+  const [isEmbedded, setIsEmbedded] = useState(false);
+
+  // Persistent refs to avoid stale closure issues in async WebSocket listeners
+  const themeIdRef = useRef(themeId);
+  themeIdRef.current = themeId;
+
+  const customSeatsMapRef = useRef(customSeatsMap);
+  customSeatsMapRef.current = customSeatsMap;
+
+  const customChefMapRef = useRef(customChefMap);
+  customChefMapRef.current = customChefMap;
+
+  const currentUserRef = useRef(currentUser);
+  currentUserRef.current = currentUser;
 
   const voiceSpeakingRef = useRef(new Set());
 
@@ -152,9 +93,78 @@ export default function App() {
     }
   }, [theme]);
 
-  // Cycle to next available theme
+  const handleUpdateSeatPos = (seatId, newX, newY) => {
+    const activeThemeId = themeIdRef.current;
+    setCustomSeatsMap((prev) => {
+      const list = prev[activeThemeId] || getTheme(activeThemeId).layout.seats;
+      const updated = list.map((s) => (s.id === seatId ? { ...s, x: newX, y: newY } : s));
+      try {
+        localStorage.setItem(`custom_seats_${activeThemeId}`, JSON.stringify(updated));
+      } catch {
+        // ignore
+      }
+      syncService.updateSeatLayout(activeThemeId, updated);
+      return {
+        ...prev,
+        [activeThemeId]: updated
+      };
+    });
+  };
+
+  const handleUpdateChefPos = (newX, newY, isCookingMode) => {
+    const activeThemeId = themeIdRef.current;
+    setCustomChefMap((prev) => {
+      const chef = prev[activeThemeId] || getTheme(activeThemeId).layout.chefStation;
+      const updated = isCookingMode
+        ? {
+            ...chef,
+            cooking: { x: newX, y: newY },
+            break: { x: Number(Math.max(2, Math.min(98, newX - 11)).toFixed(1)), y: newY }
+          }
+        : {
+            ...chef,
+            break: { x: newX, y: newY }
+          };
+
+      try {
+        localStorage.setItem(`custom_chef_${activeThemeId}`, JSON.stringify(updated));
+      } catch {
+        // ignore
+      }
+
+      syncService.updateChefLayout(activeThemeId, updated);
+      return {
+        ...prev,
+        [activeThemeId]: updated
+      };
+    });
+  };
+
+  const handleResetSeats = () => {
+    const activeThemeId = themeIdRef.current;
+    const activeThemeObj = getTheme(activeThemeId);
+    try {
+      localStorage.removeItem(`custom_seats_${activeThemeId}`);
+      localStorage.removeItem(`custom_chef_${activeThemeId}`);
+    } catch {
+      // ignore
+    }
+    setCustomSeatsMap((prev) => ({
+      ...prev,
+      [activeThemeId]: activeThemeObj.layout.seats
+    }));
+    setCustomChefMap((prev) => ({
+      ...prev,
+      [activeThemeId]: activeThemeObj.layout.chefStation
+    }));
+    syncService.updateSeatLayout(activeThemeId, activeThemeObj.layout.seats);
+    syncService.updateChefLayout(activeThemeId, activeThemeObj.layout.chefStation);
+    showNotification(`Reset ${activeThemeObj.name} seat & cook coordinates to defaults! ↺`);
+  };
+
+  // Switch theme and broadcast to all connected players
   const handleSwitchTheme = () => {
-    const currentIndex = THEME_LIST.findIndex((t) => t.id === themeId);
+    const currentIndex = THEME_LIST.findIndex((t) => t.id === themeIdRef.current);
     const nextIndex = (currentIndex + 1) % THEME_LIST.length;
     const nextTheme = THEME_LIST[nextIndex];
     setThemeId(nextTheme.id);
@@ -163,8 +173,8 @@ export default function App() {
     } catch {
       // ignore
     }
-    const nextSeats = customSeatsMap[nextTheme.id] || nextTheme.layout.seats;
-    const nextChef = customChefMap[nextTheme.id] || nextTheme.layout.chefStation;
+    const nextSeats = customSeatsMapRef.current[nextTheme.id] || nextTheme.layout.seats;
+    const nextChef = customChefMapRef.current[nextTheme.id] || nextTheme.layout.chefStation;
     // Broadcast theme change along with that theme's specific layout to all players
     syncService.updateTheme(nextTheme.id, nextSeats, nextChef);
     showNotification(`Switched theme to ${nextTheme.name} ${nextTheme.icon}! ✨`);
@@ -172,16 +182,27 @@ export default function App() {
 
   // 1. Initialize Discord SDK & Multiplayer Sync
   useEffect(() => {
+    const activeUser = currentUserRef.current;
+    const activeThemeId = themeIdRef.current;
+    const activeSeats = currentSeats;
+    const activeChef = currentChef;
+
     discordService.init().then((res) => {
       setIsEmbedded(res.isEmbedded);
 
-      const activeUser = res.currentUser || currentUser;
-      if (activeUser) {
-        applyDiscordUser(activeUser);
+      const resolvedUser = res.currentUser || activeUser;
+      if (resolvedUser) {
+        applyDiscordUser(resolvedUser);
       }
 
-      // Connect to real-time sync server with custom layout seats & theme
-      syncService.connect(res.instanceId || 'cabin-lounge', activeUser, currentSeats, themeId);
+      syncService.connect(
+        res.instanceId || 'default-lounge',
+        resolvedUser,
+        activeSeats,
+        activeChef,
+        activeThemeId,
+        customSeatsMapRef.current
+      );
     });
 
     // Subscribe to Discord live events (voice speaking, participants update)
@@ -191,14 +212,19 @@ export default function App() {
 
       if (state.currentUser) {
         applyDiscordUser(state.currentUser);
-        syncService.connect(state.instanceId || 'cabin-lounge', state.currentUser, currentSeats, themeId);
+        syncService.connect(
+          state.instanceId || 'default-lounge',
+          state.currentUser,
+          customSeatsMapRef.current[themeIdRef.current],
+          customChefMapRef.current[themeIdRef.current],
+          themeIdRef.current,
+          customSeatsMapRef.current
+        );
       }
 
-      // If Discord reports participants, sync their live voice speaking state & avatars
       if (state.participants && state.participants.length > 0) {
         const discordUsers = state.participants.map((p, idx) => formatDiscordUser(p, idx));
 
-        // Update speaking status across all seated members
         setMembers((prev) =>
           prev.map((m) => {
             const isSpeaking = voiceSpeakingRef.current.has(m.id);
@@ -215,7 +241,6 @@ export default function App() {
           })
         );
 
-        // Update chef speaking status
         setStaffList((prev) =>
           prev.map((s) => ({
             ...s,
@@ -244,97 +269,124 @@ export default function App() {
           setCustomSeatsMap((prev) => {
             const next = { ...prev };
             for (const [tId, layout] of Object.entries(payload.themeLayouts)) {
-              if (layout?.seats) next[tId] = layout.seats;
+              if (layout?.seats) {
+                next[tId] = layout.seats;
+                try {
+                  localStorage.setItem(`custom_seats_${tId}`, JSON.stringify(layout.seats));
+                } catch {}
+              }
             }
             return next;
           });
           setCustomChefMap((prev) => {
             const next = { ...prev };
             for (const [tId, layout] of Object.entries(payload.themeLayouts)) {
-              if (layout?.chefStation) next[tId] = layout.chefStation;
+              if (layout?.chefStation) {
+                next[tId] = layout.chefStation;
+                try {
+                  localStorage.setItem(`custom_chef_${tId}`, JSON.stringify(layout.chefStation));
+                } catch {}
+              }
             }
             return next;
           });
-        } else if (payload?.layoutSeats && Array.isArray(payload.layoutSeats) && payload.layoutSeats.length > 0) {
-          setCustomSeatsMap((prev) => ({
-            ...prev,
-            [payload?.themeId || themeId]: payload.layoutSeats
-          }));
         }
-        if (payload?.themeId && payload.themeId !== themeId) {
+        if (payload?.themeId && payload.themeId !== themeIdRef.current) {
           setThemeId(payload.themeId);
+          try {
+            localStorage.setItem('discord_active_theme', payload.themeId);
+          } catch {}
         }
       }
 
       // Live seat coordinate updates from other players dragging chairs
       if (type === 'SEAT_LAYOUT_UPDATE') {
-        const targetThemeId = payload?.themeId || themeId;
+        const targetThemeId = payload?.themeId || themeIdRef.current;
         if (payload?.layoutSeats && Array.isArray(payload.layoutSeats)) {
           setCustomSeatsMap((prev) => ({
             ...prev,
             [targetThemeId]: payload.layoutSeats
           }));
+          try {
+            localStorage.setItem(`custom_seats_${targetThemeId}`, JSON.stringify(payload.layoutSeats));
+          } catch {}
         }
       }
 
       // Live cook coordinate updates from other players dragging cook
       if (type === 'CHEF_LAYOUT_UPDATE') {
-        const targetThemeId = payload?.themeId || themeId;
+        const targetThemeId = payload?.themeId || themeIdRef.current;
         if (payload?.chefStation) {
           setCustomChefMap((prev) => ({
             ...prev,
             [targetThemeId]: payload.chefStation
           }));
+          try {
+            localStorage.setItem(`custom_chef_${targetThemeId}`, JSON.stringify(payload.chefStation));
+          } catch {}
         }
       }
 
-      // Live theme update from other player switching themes
+      // Live theme update from other player switching themes (syncs theme, seats, & people placement)
       if (type === 'THEME_UPDATE') {
         if (payload?.themeId) {
           setThemeId(payload.themeId);
+          try {
+            localStorage.setItem('discord_active_theme', payload.themeId);
+          } catch {}
+        }
+        if (payload?.seats) {
+          const seatedList = Object.values(payload.seats).map((u) => ({
+            ...u,
+            isSpeaking: voiceSpeakingRef.current.has(u.id)
+          }));
+          setMembers(seatedList);
+        }
+        if (payload?.staffList) {
+          setStaffList(payload.staffList);
         }
         if (payload?.themeLayouts) {
           setCustomSeatsMap((prev) => {
             const next = { ...prev };
             for (const [tId, layout] of Object.entries(payload.themeLayouts)) {
-              if (layout?.seats) next[tId] = layout.seats;
+              if (layout?.seats) {
+                next[tId] = layout.seats;
+                try {
+                  localStorage.setItem(`custom_seats_${tId}`, JSON.stringify(layout.seats));
+                } catch {}
+              }
             }
             return next;
           });
           setCustomChefMap((prev) => {
             const next = { ...prev };
             for (const [tId, layout] of Object.entries(payload.themeLayouts)) {
-              if (layout?.chefStation) next[tId] = layout.chefStation;
+              if (layout?.chefStation) {
+                next[tId] = layout.chefStation;
+                try {
+                  localStorage.setItem(`custom_chef_${tId}`, JSON.stringify(layout.chefStation));
+                } catch {}
+              }
             }
             return next;
           });
-        } else {
-          if (payload?.layoutSeats && Array.isArray(payload.layoutSeats)) {
-            setCustomSeatsMap((prev) => ({
-              ...prev,
-              [payload?.themeId || themeId]: payload.layoutSeats
-            }));
-          }
-          if (payload?.chefStation) {
-            setCustomChefMap((prev) => ({
-              ...prev,
-              [payload?.themeId || themeId]: payload.chefStation
-            }));
-          }
         }
+        const updatedThemeName = getTheme(payload?.themeId)?.name || 'Theme';
+        showNotification(`Theme synchronized to ${updatedThemeName}! ✨`);
       }
 
       // Live seat-to-seat movement from another connected player
       if (type === 'GUEST_SEAT_MOVE') {
         const { fromSeatId, targetSeatId, user } = payload;
-        if (user && user.id !== currentUser?.id) {
+        if (user && user.id !== currentUserRef.current?.id) {
           setMovingGuest({
             ...user,
             fromSeatId,
             targetSeatId,
             seatId: targetSeatId
           });
-          const targetSeatName = currentSeats.find((s) => s.id === targetSeatId)?.name || 'another seat';
+          const activeSeats = customSeatsMapRef.current[themeIdRef.current] || getTheme(themeIdRef.current).layout.seats;
+          const targetSeatName = activeSeats.find((s) => s.id === targetSeatId)?.name || 'another seat';
           showNotification(`${user.name} is walking to ${targetSeatName}... 🚶‍♂️✨`);
         }
       }
@@ -357,14 +409,14 @@ export default function App() {
 
       if (type === 'PLAYER_JOINED') {
         const player = payload?.user;
-        if (player && player.id !== currentUser?.id) {
+        if (player && player.id !== currentUserRef.current?.id) {
           showNotification(`🚪 Door opened! ${player.name} entered the lounge! ✨`);
         }
       }
 
       if (type === 'PLAYER_LEFT') {
         const player = payload?.user;
-        if (player && player.id !== currentUser?.id) {
+        if (player && player.id !== currentUserRef.current?.id) {
           showNotification(`${player.name} left through the door. 👋`);
         }
       }
@@ -415,13 +467,7 @@ export default function App() {
     const seatedOccupant = members.find((m) => m.seatId === vacantSeatId);
 
     if (!seatedOccupant) {
-      const userToSeat = currentUser || {
-        id: 'local-user',
-        name: 'Guest Traveler',
-        avatar: 'https://cdn.discordapp.com/embed/avatars/0.png',
-        role: 'You',
-        roleColor: '#faa61a'
-      };
+      const userToSeat = currentUser || getOrCreateLocalUser();
 
       // Check if user is already seated in another chair
       const currentMember = members.find((m) => m.id === userToSeat.id && m.seatId);

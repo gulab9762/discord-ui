@@ -5,7 +5,7 @@ export function setupSyncServer(httpServer) {
 
   const wss = new WebSocketServer({ noServer: true });
 
-  // Map of instanceId -> { instanceId, themeId, layoutSeats, seats: {}, staffList: [], clients: Set<WebSocket> }
+  // Map of instanceId -> { instanceId, themeId, themeLayouts, seats: {}, staffList: [], clients: Set<WebSocket> }
   const rooms = new Map();
 
   function getOrCreateRoom(instanceId = 'default-lounge') {
@@ -95,7 +95,8 @@ export function setupSyncServer(httpServer) {
             if (!room.themeLayouts[payload.themeId]) room.themeLayouts[payload.themeId] = {};
             room.themeLayouts[payload.themeId].chefStation = payload.chefStation;
           }
-          if (payload?.themeId && room.themeId === 'jungle-cabin') {
+          // The first joined user sets initial theme if not set
+          if (payload?.themeId && room.clients.size === 1) {
             room.themeId = payload.themeId;
           }
 
@@ -111,8 +112,14 @@ export function setupSyncServer(httpServer) {
           }
 
           // Automatically auto-seat user at next available chair if they don't have one
-          const alreadySeated = Object.values(room.seats).some((u) => u.id === currentUser?.id);
-          if (!alreadySeated && currentUser) {
+          const alreadySeated = Object.values(room.seats).find((u) => u.id === currentUser?.id);
+          if (alreadySeated) {
+            room.seats[alreadySeated.seatId] = {
+              ...alreadySeated,
+              ...currentUser,
+              seatId: alreadySeated.seatId
+            };
+          } else if (currentUser) {
             for (let i = 1; i <= 10; i++) {
               const seatId = `seat-${i}`;
               if (!room.seats[seatId]) {
@@ -207,6 +214,8 @@ export function setupSyncServer(httpServer) {
               type: 'THEME_UPDATE',
               payload: {
                 themeId: room.themeId,
+                seats: room.seats,
+                staffList: room.staffList,
                 layoutSeats: room.themeLayouts[room.themeId]?.seats || null,
                 chefStation: room.themeLayouts[room.themeId]?.chefStation || null,
                 themeLayouts: room.themeLayouts
@@ -277,7 +286,7 @@ export function setupSyncServer(httpServer) {
             broadcastToRoom(room, {
               type: 'STATE_UPDATE',
               payload: { seats: room.seats }
-            }, ws);
+            });
           }
         }
 

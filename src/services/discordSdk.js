@@ -99,6 +99,40 @@ export function getStoredDiscordUser() {
   return null;
 }
 
+export function getOrCreateLocalUser() {
+  try {
+    const cached = getStoredDiscordUser();
+    if (cached) return cached;
+
+    const existingSession = sessionStorage.getItem('discord_tab_user');
+    if (existingSession) return JSON.parse(existingSession);
+
+    const randomId = `guest-${Math.random().toString(36).slice(2, 8)}`;
+    const randomAvatarIdx = Math.floor(Math.random() * 6);
+    const names = ['Forest Ranger', 'Wandering Bard', 'River Scout', 'Canopy Hiker', 'Mountain Guide', 'Stargazer'];
+    const randomName = names[Math.floor(Math.random() * names.length)];
+    const newUser = {
+      id: randomId,
+      name: randomName,
+      avatar: `https://cdn.discordapp.com/embed/avatars/${randomAvatarIdx}.png`,
+      role: 'You',
+      roleColor: '#faa61a',
+      status: 'online'
+    };
+    sessionStorage.setItem('discord_tab_user', JSON.stringify(newUser));
+    return newUser;
+  } catch {
+    return {
+      id: `guest-${Date.now()}`,
+      name: 'Guest Traveler',
+      avatar: 'https://cdn.discordapp.com/embed/avatars/0.png',
+      role: 'You',
+      roleColor: '#faa61a',
+      status: 'online'
+    };
+  }
+}
+
 export function saveStoredDiscordUser(user) {
   try {
     if (!user || !user.id) return;

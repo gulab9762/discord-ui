@@ -5,17 +5,21 @@ class SyncService {
     this.instanceId = 'default-lounge';
     this.currentUser = null;
     this.layoutSeats = null;
+    this.chefStation = null;
     this.themeId = null;
+    this.themeLayouts = null;
     this.listeners = new Set();
     this.reconnectTimer = null;
     this.isConnected = false;
   }
 
-  connect(instanceId, user, layoutSeats = null, themeId = null) {
+  connect(instanceId, user, layoutSeats = null, chefStation = null, themeId = null, themeLayouts = null) {
     if (instanceId) this.instanceId = instanceId;
     if (user) this.currentUser = user;
     if (layoutSeats) this.layoutSeats = layoutSeats;
+    if (chefStation) this.chefStation = chefStation;
     if (themeId) this.themeId = themeId;
+    if (themeLayouts) this.themeLayouts = themeLayouts;
 
     if (typeof window === 'undefined') return;
 
@@ -26,8 +30,10 @@ class SyncService {
           instanceId: this.instanceId,
           payload: {
             user: this.currentUser,
+            themeId: this.themeId,
             layoutSeats: this.layoutSeats,
-            themeId: this.themeId
+            chefStation: this.chefStation,
+            themeLayouts: this.themeLayouts
           }
         });
       }
@@ -51,8 +57,10 @@ class SyncService {
             instanceId: this.instanceId,
             payload: {
               user: this.currentUser,
+              themeId: this.themeId,
               layoutSeats: this.layoutSeats,
-              themeId: this.themeId
+              chefStation: this.chefStation,
+              themeLayouts: this.themeLayouts
             }
           });
         }
@@ -72,7 +80,7 @@ class SyncService {
         // Reconnect after 2 seconds
         clearTimeout(this.reconnectTimer);
         this.reconnectTimer = setTimeout(() => {
-          this.connect(this.instanceId, this.currentUser, this.layoutSeats, this.themeId);
+          this.connect(this.instanceId, this.currentUser, this.layoutSeats, this.chefStation, this.themeId, this.themeLayouts);
         }, 2000);
       };
 
