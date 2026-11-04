@@ -20,58 +20,102 @@ export default function App() {
 
   const theme = getTheme(themeId);
 
-  // Dynamic / customizable seats with localStorage persistence per theme
-  const [customSeats, setCustomSeats] = useState(() => {
-    try {
-      const saved = localStorage.getItem(`custom_seats_${theme.id}`);
-      if (saved) return JSON.parse(saved);
-    } catch {
-      // ignore
-    }
-    return theme.layout.seats;
+  // Per-theme customizable seat & chef layouts with localStorage persistence
+  const [customSeatsMap, setCustomSeatsMap] = useState(() => {
+    const map = {};
+    THEME_LIST.forEach((t) => {
+      try {
+        const saved = localStorage.getItem(`custom_seats_${t.id}`);
+        map[t.id] = saved ? JSON.parse(saved) : t.layout.seats;
+      } catch {
+        map[t.id] = t.layout.seats;
+      }
+    });
+    return map;
   });
 
-  // Re-sync seats whenever theme changes
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(`custom_seats_${theme.id}`);
-      if (saved) {
-        setCustomSeats(JSON.parse(saved));
-        return;
+  const [customChefMap, setCustomChefMap] = useState(() => {
+    const map = {};
+    THEME_LIST.forEach((t) => {
+      try {
+        const saved = localStorage.getItem(`custom_chef_${t.id}`);
+        map[t.id] = saved ? JSON.parse(saved) : t.layout.chefStation;
+      } catch {
+        map[t.id] = t.layout.chefStation;
       }
-    } catch {
-      // ignore
-    }
-    setCustomSeats(theme.layout.seats);
-  }, [theme.id]);
+    });
+    return map;
+  });
+
+  const currentSeats = customSeatsMap[theme.id] || theme.layout.seats;
+  const currentChef = customChefMap[theme.id] || theme.layout.chefStation;
 
   // Edit / Repositioning Mode Toggle
   const [isEditMode, setIsEditMode] = useState(false);
 
   const handleUpdateSeatPos = (seatId, newX, newY) => {
-    setCustomSeats((prev) => {
-      const updated = prev.map((s) => (s.id === seatId ? { ...s, x: newX, y: newY } : s));
+    setCustomSeatsMap((prev) => {
+      const list = prev[theme.id] || theme.layout.seats;
+      const updated = list.map((s) => (s.id === seatId ? { ...s, x: newX, y: newY } : s));
       try {
         localStorage.setItem(`custom_seats_${theme.id}`, JSON.stringify(updated));
       } catch {
         // ignore
       }
-      // Broadcast updated seat coordinates to all joined players in real time!
-      syncService.updateSeatLayout(updated);
-      return updated;
+      syncService.updateSeatLayout(theme.id, updated);
+      return {
+        ...prev,
+        [theme.id]: updated
+      };
+    });
+  };
+
+  const handleUpdateChefPos = (newX, newY, isCookingMode) => {
+    setCustomChefMap((prev) => {
+      const chef = prev[theme.id] || theme.layout.chefStation;
+      const updated = isCookingMode
+        ? {
+            ...chef,
+            cooking: { x: newX, y: newY },
+            break: { x: Number(Math.max(2, Math.min(98, newX - 11)).toFixed(1)), y: newY }
+          }
+        : {
+            ...chef,
+            break: { x: newX, y: newY }
+          };
+
+      try {
+        localStorage.setItem(`custom_chef_${theme.id}`, JSON.stringify(updated));
+      } catch {
+        // ignore
+      }
+
+      syncService.updateChefLayout(theme.id, updated);
+      return {
+        ...prev,
+        [theme.id]: updated
+      };
     });
   };
 
   const handleResetSeats = () => {
     try {
       localStorage.removeItem(`custom_seats_${theme.id}`);
+      localStorage.removeItem(`custom_chef_${theme.id}`);
     } catch {
       // ignore
     }
-    setCustomSeats(theme.layout.seats);
-    // Broadcast reset layout to all joined players
-    syncService.updateSeatLayout(theme.layout.seats);
-    showNotification(`Reset ${theme.name} seat coordinates to defaults! ↺`);
+    setCustomSeatsMap((prev) => ({
+      ...prev,
+      [theme.id]: theme.layout.seats
+    }));
+    setCustomChefMap((prev) => ({
+      ...prev,
+      [theme.id]: theme.layout.chefStation
+    }));
+    syncService.updateSeatLayout(theme.id, theme.layout.seats);
+    syncService.updateChefLayout(theme.id, theme.layout.chefStation);
+    showNotification(`Reset ${theme.name} seat & cook coordinates to defaults! ↺`);
   };
 
   const [members, setMembers] = useState(INITIAL_MEMBERS);
@@ -119,8 +163,10 @@ export default function App() {
     } catch {
       // ignore
     }
-    // Broadcast theme change & seat layout to all players
-    syncService.updateTheme(nextTheme.id, nextTheme.layout.seats);
+    const nextSeats = customSeatsMap[nextTheme.id] || nextTheme.layout.seats;
+    const nextChef = customChefMap[nextTheme.id] || nextTheme.layout.chefStation;
+    // Broadcast theme change along with that theme's specific layout to all players
+    syncService.updateTheme(nextTheme.id, nextSeats, nextChef);
     showNotification(`Switched theme to ${nextTheme.name} ${nextTheme.icon}! ✨`);
   };
 
@@ -135,7 +181,7 @@ export default function App() {
       }
 
       // Connect to real-time sync server with custom layout seats & theme
-      syncService.connect(res.instanceId || 'cabin-lounge', activeUser, customSeats, themeId);
+      syncService.connect(res.instanceId || 'cabin-lounge', activeUser, currentSeats, themeId);
     });
 
     // Subscribe to Discord live events (voice speaking, participants update)
@@ -145,7 +191,7 @@ export default function App() {
 
       if (state.currentUser) {
         applyDiscordUser(state.currentUser);
-        syncService.connect(state.instanceId || 'cabin-lounge', state.currentUser, customSeats, themeId);
+        syncService.connect(state.instanceId || 'cabin-lounge', state.currentUser, currentSeats, themeId);
       }
 
       // If Discord reports participants, sync their live voice speaking state & avatars
@@ -194,9 +240,26 @@ export default function App() {
         if (payload?.staffList && payload.staffList.length > 0) {
           setStaffList(payload.staffList);
         }
-        // Sync active seat layout & theme from server if present
-        if (payload?.layoutSeats && Array.isArray(payload.layoutSeats) && payload.layoutSeats.length > 0) {
-          setCustomSeats(payload.layoutSeats);
+        if (payload?.themeLayouts) {
+          setCustomSeatsMap((prev) => {
+            const next = { ...prev };
+            for (const [tId, layout] of Object.entries(payload.themeLayouts)) {
+              if (layout?.seats) next[tId] = layout.seats;
+            }
+            return next;
+          });
+          setCustomChefMap((prev) => {
+            const next = { ...prev };
+            for (const [tId, layout] of Object.entries(payload.themeLayouts)) {
+              if (layout?.chefStation) next[tId] = layout.chefStation;
+            }
+            return next;
+          });
+        } else if (payload?.layoutSeats && Array.isArray(payload.layoutSeats) && payload.layoutSeats.length > 0) {
+          setCustomSeatsMap((prev) => ({
+            ...prev,
+            [payload?.themeId || themeId]: payload.layoutSeats
+          }));
         }
         if (payload?.themeId && payload.themeId !== themeId) {
           setThemeId(payload.themeId);
@@ -205,8 +268,23 @@ export default function App() {
 
       // Live seat coordinate updates from other players dragging chairs
       if (type === 'SEAT_LAYOUT_UPDATE') {
+        const targetThemeId = payload?.themeId || themeId;
         if (payload?.layoutSeats && Array.isArray(payload.layoutSeats)) {
-          setCustomSeats(payload.layoutSeats);
+          setCustomSeatsMap((prev) => ({
+            ...prev,
+            [targetThemeId]: payload.layoutSeats
+          }));
+        }
+      }
+
+      // Live cook coordinate updates from other players dragging cook
+      if (type === 'CHEF_LAYOUT_UPDATE') {
+        const targetThemeId = payload?.themeId || themeId;
+        if (payload?.chefStation) {
+          setCustomChefMap((prev) => ({
+            ...prev,
+            [targetThemeId]: payload.chefStation
+          }));
         }
       }
 
@@ -215,8 +293,34 @@ export default function App() {
         if (payload?.themeId) {
           setThemeId(payload.themeId);
         }
-        if (payload?.layoutSeats && Array.isArray(payload.layoutSeats)) {
-          setCustomSeats(payload.layoutSeats);
+        if (payload?.themeLayouts) {
+          setCustomSeatsMap((prev) => {
+            const next = { ...prev };
+            for (const [tId, layout] of Object.entries(payload.themeLayouts)) {
+              if (layout?.seats) next[tId] = layout.seats;
+            }
+            return next;
+          });
+          setCustomChefMap((prev) => {
+            const next = { ...prev };
+            for (const [tId, layout] of Object.entries(payload.themeLayouts)) {
+              if (layout?.chefStation) next[tId] = layout.chefStation;
+            }
+            return next;
+          });
+        } else {
+          if (payload?.layoutSeats && Array.isArray(payload.layoutSeats)) {
+            setCustomSeatsMap((prev) => ({
+              ...prev,
+              [payload?.themeId || themeId]: payload.layoutSeats
+            }));
+          }
+          if (payload?.chefStation) {
+            setCustomChefMap((prev) => ({
+              ...prev,
+              [payload?.themeId || themeId]: payload.chefStation
+            }));
+          }
         }
       }
 
@@ -230,7 +334,7 @@ export default function App() {
             targetSeatId,
             seatId: targetSeatId
           });
-          const targetSeatName = customSeats.find((s) => s.id === targetSeatId)?.name || 'another seat';
+          const targetSeatName = currentSeats.find((s) => s.id === targetSeatId)?.name || 'another seat';
           showNotification(`${user.name} is walking to ${targetSeatName}... 🚶‍♂️✨`);
         }
       }
@@ -394,7 +498,7 @@ export default function App() {
         }
       ];
     });
-    const targetSeat = customSeats.find((s) => s.id === (guest.targetSeatId || guest.seatId));
+    const targetSeat = currentSeats.find((s) => s.id === (guest.targetSeatId || guest.seatId));
     showNotification(`${guest.name} took a seat at ${targetSeat?.name || 'the table'}! 🪑✨`);
   };
 
@@ -414,7 +518,7 @@ export default function App() {
         }
       ];
     });
-    const targetSeat = customSeats.find((s) => s.id === guest.targetSeatId);
+    const targetSeat = currentSeats.find((s) => s.id === guest.targetSeatId);
     showNotification(`${guest.name} sat down at ${targetSeat?.name || 'their new seat'}! 🪑✨`);
   };
 
@@ -422,7 +526,7 @@ export default function App() {
   const handleAddMember = () => {
     if (enteringGuest || leavingGuest || movingGuest) return;
 
-    const vacantSeats = customSeats.filter((s) => !members.some((m) => m.seatId === s.id));
+    const vacantSeats = currentSeats.filter((s) => !members.some((m) => m.seatId === s.id));
     if (vacantSeats.length === 0) {
       showNotification('All seats around the tables are taken!');
       return;
@@ -561,7 +665,9 @@ export default function App() {
       <main className="server-stage-unified">
         <LoungeRoom
           theme={theme}
-          seats={customSeats}
+          seats={currentSeats}
+          chefStation={currentChef}
+          onUpdateChefPos={handleUpdateChefPos}
           members={members}
           onSeatClick={handleSeatClick}
           onMemberClick={handleMemberClick}

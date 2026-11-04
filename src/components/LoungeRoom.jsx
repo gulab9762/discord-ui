@@ -10,6 +10,8 @@ import { DoorSprite } from './sprites/FurnitureSprites';
 export default function LoungeRoom({
   theme,
   seats,
+  chefStation,
+  onUpdateChefPos,
   members,
   onSeatClick,
   onMemberClick,
@@ -44,7 +46,7 @@ export default function LoungeRoom({
   // Dynamic theme layout definitions
   const layout = theme.layout;
   const doorConfig = layout.door;
-  const chefConfig = layout.chefStation;
+  const currentChef = chefStation || layout.chefStation;
   const currentSeats = seats || layout.seats;
 
   const activeStaff = staffList?.find((s) => s.isActive) || staffList?.[0];
@@ -212,11 +214,47 @@ export default function LoungeRoom({
     window.addEventListener('touchend', onUp);
   };
 
+  // 5. INTERACTIVE DRAG & DROP FOR CHEF / COOK POSITION
+  const handleChefMouseDown = (e) => {
+    if (!isEditMode || !onUpdateChefPos) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    const roomEl = roomRef.current;
+    if (!roomEl) return;
+
+    const onMove = (moveEvent) => {
+      const clientX = moveEvent.touches ? moveEvent.touches[0].clientX : moveEvent.clientX;
+      const clientY = moveEvent.touches ? moveEvent.touches[0].clientY : moveEvent.clientY;
+      const rect = roomEl.getBoundingClientRect();
+
+      const newX = Math.max(2, Math.min(98, ((clientX - rect.left) / rect.width) * 100));
+      const newY = Math.max(2, Math.min(98, ((clientY - rect.top) / rect.height) * 100));
+
+      onUpdateChefPos(Number(newX.toFixed(1)), Number(newY.toFixed(1)), isCooking);
+    };
+
+    const onUp = () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+      window.removeEventListener('touchmove', onMove);
+      window.removeEventListener('touchend', onUp);
+    };
+
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    window.addEventListener('touchmove', onMove, { passive: false });
+    window.addEventListener('touchend', onUp);
+  };
+
   const handleCopyLayoutJson = () => {
-    const formatted = JSON.stringify(currentSeats, null, 2);
+    const formatted = JSON.stringify({
+      chefStation: currentChef,
+      seats: currentSeats
+    }, null, 2);
     if (navigator?.clipboard?.writeText) {
       navigator.clipboard.writeText(formatted);
-      if (onNotify) onNotify('📋 Copied updated seat coordinates JSON to clipboard!');
+      if (onNotify) onNotify('📋 Copied theme layout JSON (seats & cook) to clipboard!');
     }
   };
 
@@ -372,16 +410,32 @@ export default function LoungeRoom({
           );
         })}
 
-        {/* 4. DYNAMIC CHEF CORNER (Positioned from active theme) */}
+        {/* 4. DYNAMIC CHEF CORNER (Positioned from active theme, draggable in edit mode) */}
         {activeStaff && (
           <div
-            className={`chef-station-hotspot ${isCooking ? 'cooking-mode' : 'break-mode'}`}
+            className={`chef-station-hotspot ${isCooking ? 'cooking-mode' : 'break-mode'} ${isEditMode ? 'draggable-chef-active' : ''}`}
             style={{
-              left: `${isCooking ? chefConfig.cooking.x : chefConfig.break.x}%`,
-              top: `${isCooking ? chefConfig.cooking.y : chefConfig.break.y}%`,
-              zIndex: 70
+              left: `${isCooking ? currentChef.cooking.x : currentChef.break.x}%`,
+              top: `${isCooking ? currentChef.cooking.y : currentChef.break.y}%`,
+              zIndex: isEditMode ? 510 : 70
             }}
+            onMouseDown={(e) => isEditMode && handleChefMouseDown(e)}
+            onTouchStart={(e) => isEditMode && handleChefMouseDown(e)}
+            data-tooltip={
+              isEditMode
+                ? `Drag Cook (${isCooking ? currentChef.cooking.x : currentChef.break.x}%, ${isCooking ? currentChef.cooking.y : currentChef.break.y}%)`
+                : `${activeStaff.name} (Chef) • ${isCooking ? 'Cooking at stove' : 'On break'} (Click to toggle)`
+            }
+            data-tooltip-pos="top"
           >
+            {/* Coordinate Chip visible during Edit Mode */}
+            {isEditMode && (
+              <div className="drag-coords-badge chef-coords-badge">
+                <Move size={10} className="drag-icon-micro" />
+                <span>Cook {isCooking ? currentChef.cooking.x : currentChef.break.x}%, {isCooking ? currentChef.cooking.y : currentChef.break.y}%</span>
+              </div>
+            )}
+
             {/* Chef Hat when cooking */}
             {isCooking && (
               <div className="chef-hat-floater" data-tooltip="Head Chef on duty" data-tooltip-pos="top">
@@ -404,7 +458,10 @@ export default function LoungeRoom({
             {/* Chef Avatar with Toggle */}
             <div 
               className="chef-avatar-wrapper"
-              onClick={() => onToggleStaffActive(activeStaff.id)}
+              onClick={() => {
+                if (isEditMode) return;
+                onToggleStaffActive(activeStaff.id);
+              }}
               data-tooltip={`${activeStaff.name} (Chef) • ${isCooking ? 'Cooking at stove' : 'On break'} (Click to toggle)`}
               data-tooltip-pos="top"
             >
@@ -426,12 +483,12 @@ export default function LoungeRoom({
           </div>
         )}
 
-        {/* 5. FLOATING SEAT POSITIONING TOOLBAR (In Edit Mode) */}
+        {/* 5. FLOATING POSITIONING TOOLBAR (In Edit Mode) */}
         {isEditMode && (
           <div className="layout-editor-toolbar">
             <div className="editor-status-text">
               <Move size={15} className="editor-pulse-icon" />
-              <span>Drag any seat to reposition</span>
+              <span>Drag any seat or cook to reposition</span>
             </div>
             <div className="editor-actions">
               <button 

@@ -122,22 +122,28 @@ class SyncService {
     });
   }
 
-  updateSeatLayout(layoutSeats) {
-    this.layoutSeats = layoutSeats;
+  updateSeatLayout(themeId, layoutSeats) {
     this.send({
       type: 'UPDATE_SEAT_LAYOUT',
       instanceId: this.instanceId,
-      payload: { layoutSeats }
+      payload: { themeId, layoutSeats }
     });
   }
 
-  updateTheme(themeId, layoutSeats = null) {
+  updateChefLayout(themeId, chefStation) {
+    this.send({
+      type: 'UPDATE_CHEF_LAYOUT',
+      instanceId: this.instanceId,
+      payload: { themeId, chefStation }
+    });
+  }
+
+  updateTheme(themeId, layoutSeats = null, chefStation = null) {
     this.themeId = themeId;
-    if (layoutSeats) this.layoutSeats = layoutSeats;
     this.send({
       type: 'UPDATE_THEME',
       instanceId: this.instanceId,
-      payload: { themeId, layoutSeats }
+      payload: { themeId, layoutSeats, chefStation }
     });
   }
 

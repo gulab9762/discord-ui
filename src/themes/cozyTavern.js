@@ -5,7 +5,7 @@ export const cozyTavernTheme = {
   id: 'cozy-tavern',
   name: 'Warm Hearth Tavern',
   icon: '🪵',
-  background: '/jungle-cabin-bg.jpg',
+  background: '/outside-cafe.jpg',
   weather: '18°C Mountain Evening • Crackling Hearth 🔥',
 
   themeVars: {

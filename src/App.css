@@ -1026,6 +1026,33 @@
   color: #fbbf24 !important;
 }
 
+/* When editor is active, chef / cook station is also draggable */
+.chef-station-hotspot.draggable-chef-active {
+  transition: none !important;
+  cursor: grab !important;
+  user-select: none;
+  touch-action: none;
+}
+
+.chef-station-hotspot.draggable-chef-active:active {
+  cursor: grabbing !important;
+  transform: translate(-50%, -50%) scale(1.15) !important;
+}
+
+.draggable-chef-active .chef-avatar-wrapper {
+  border: 2px dashed #f59e0b !important;
+  background: rgba(245, 158, 11, 0.2) !important;
+  box-shadow: 0 0 16px rgba(245, 158, 11, 0.6) !important;
+  border-radius: 50% !important;
+}
+
+.chef-coords-badge {
+  top: -28px !important;
+  border-color: #f59e0b !important;
+  background: rgba(15, 23, 42, 0.95) !important;
+  color: #fbbf24 !important;
+}
+
 .drag-coords-badge {
   position: absolute;
   top: -24px;

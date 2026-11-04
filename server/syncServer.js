@@ -13,7 +13,7 @@ export function setupSyncServer(httpServer) {
       rooms.set(instanceId, {
         instanceId,
         themeId: 'jungle-cabin',
-        layoutSeats: null, // stores custom dragged seat placements
+        themeLayouts: {}, // map of themeId -> { seats: [], chefStation: {} }
         seats: {}, // seatId -> user
         staffList: [
           {
@@ -79,9 +79,21 @@ export function setupSyncServer(httpServer) {
           const room = getOrCreateRoom(currentInstanceId);
           room.clients.add(ws);
 
-          // If joining client has custom layout seats or theme, sync if room doesn't have it yet
-          if (payload?.layoutSeats && !room.layoutSeats) {
-            room.layoutSeats = payload.layoutSeats;
+          // If joining client has custom per-theme layout or theme, register it
+          if (payload?.themeLayouts) {
+            for (const [tId, layout] of Object.entries(payload.themeLayouts)) {
+              if (!room.themeLayouts[tId]) {
+                room.themeLayouts[tId] = layout;
+              }
+            }
+          }
+          if (payload?.layoutSeats && payload?.themeId && !room.themeLayouts[payload.themeId]?.seats) {
+            if (!room.themeLayouts[payload.themeId]) room.themeLayouts[payload.themeId] = {};
+            room.themeLayouts[payload.themeId].seats = payload.layoutSeats;
+          }
+          if (payload?.chefStation && payload?.themeId && !room.themeLayouts[payload.themeId]?.chefStation) {
+            if (!room.themeLayouts[payload.themeId]) room.themeLayouts[payload.themeId] = {};
+            room.themeLayouts[payload.themeId].chefStation = payload.chefStation;
           }
           if (payload?.themeId && room.themeId === 'jungle-cabin') {
             room.themeId = payload.themeId;
@@ -119,8 +131,10 @@ export function setupSyncServer(httpServer) {
             payload: {
               seats: room.seats,
               staffList: room.staffList,
-              layoutSeats: room.layoutSeats,
-              themeId: room.themeId
+              themeId: room.themeId,
+              themeLayouts: room.themeLayouts,
+              layoutSeats: room.themeLayouts[room.themeId]?.seats || null,
+              chefStation: room.themeLayouts[room.themeId]?.chefStation || null
             }
           }));
 
@@ -139,31 +153,63 @@ export function setupSyncServer(httpServer) {
           }, ws);
         }
 
-        // 1. UPDATE SEAT LAYOUT (Synchronizes dragged chair coordinates in real time)
+        // 1. UPDATE SEAT LAYOUT (Synchronizes dragged chair coordinates per theme in real time)
         if (type === 'UPDATE_SEAT_LAYOUT') {
           const room = getOrCreateRoom(currentInstanceId);
+          const targetThemeId = payload?.themeId || room.themeId;
           if (payload?.layoutSeats) {
-            room.layoutSeats = payload.layoutSeats;
+            if (!room.themeLayouts[targetThemeId]) room.themeLayouts[targetThemeId] = {};
+            room.themeLayouts[targetThemeId].seats = payload.layoutSeats;
+
             broadcastToRoom(room, {
               type: 'SEAT_LAYOUT_UPDATE',
-              payload: { layoutSeats: room.layoutSeats }
+              payload: {
+                themeId: targetThemeId,
+                layoutSeats: payload.layoutSeats
+              }
             });
           }
         }
 
-        // 2. UPDATE THEME (Synchronizes active theme across joined players)
+        // 2. UPDATE CHEF LAYOUT (Synchronizes dragged cook coordinates per theme in real time)
+        if (type === 'UPDATE_CHEF_LAYOUT') {
+          const room = getOrCreateRoom(currentInstanceId);
+          const targetThemeId = payload?.themeId || room.themeId;
+          if (payload?.chefStation) {
+            if (!room.themeLayouts[targetThemeId]) room.themeLayouts[targetThemeId] = {};
+            room.themeLayouts[targetThemeId].chefStation = payload.chefStation;
+
+            broadcastToRoom(room, {
+              type: 'CHEF_LAYOUT_UPDATE',
+              payload: {
+                themeId: targetThemeId,
+                chefStation: payload.chefStation
+              }
+            });
+          }
+        }
+
+        // 3. UPDATE THEME (Synchronizes active theme & its layout across joined players)
         if (type === 'UPDATE_THEME') {
           const room = getOrCreateRoom(currentInstanceId);
           if (payload?.themeId) {
             room.themeId = payload.themeId;
             if (payload?.layoutSeats) {
-              room.layoutSeats = payload.layoutSeats;
+              if (!room.themeLayouts[room.themeId]) room.themeLayouts[room.themeId] = {};
+              room.themeLayouts[room.themeId].seats = payload.layoutSeats;
             }
+            if (payload?.chefStation) {
+              if (!room.themeLayouts[room.themeId]) room.themeLayouts[room.themeId] = {};
+              room.themeLayouts[room.themeId].chefStation = payload.chefStation;
+            }
+
             broadcastToRoom(room, {
               type: 'THEME_UPDATE',
               payload: {
                 themeId: room.themeId,
-                layoutSeats: room.layoutSeats
+                layoutSeats: room.themeLayouts[room.themeId]?.seats || null,
+                chefStation: room.themeLayouts[room.themeId]?.chefStation || null,
+                themeLayouts: room.themeLayouts
               }
             });
           }
