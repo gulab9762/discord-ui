@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Volume2, VolumeX, UserPlus, Flame, Mic, HelpCircle, Palette, CloudRain } from 'lucide-react';
+import { Volume2, VolumeX, UserPlus, Flame, Mic, HelpCircle, Palette, CloudRain, Move } from 'lucide-react';
 import { ambientAudio } from '../services/ambientAudio';
 
 export default function Header({
@@ -12,7 +12,9 @@ export default function Header({
   onToggleSpeaking,
   onOpenGuide,
   isEmbedded,
-  currentUserName
+  currentUserName,
+  isEditMode,
+  onToggleEditMode
 }) {
   const [soundEnabled, setSoundEnabled] = useState(false);
 
@@ -88,6 +90,17 @@ export default function Header({
           aria-label="Switch Theme"
         >
           <Palette size={18} />
+        </button>
+
+        {/* Drag & Drop Seat Positioning Editor Toggle */}
+        <button
+          className={`icon-btn edit-seat-btn ${isEditMode ? 'active' : ''}`}
+          onClick={onToggleEditMode}
+          data-tooltip={isEditMode ? 'Exit Seat Placement Editor' : 'Drag Seats Mode (Reposition chairs)'}
+          data-tooltip-align="right"
+          aria-label="Toggle Seat Editor"
+        >
+          <Move size={18} />
         </button>
 
         <button 

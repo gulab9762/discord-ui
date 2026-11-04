@@ -961,3 +961,171 @@
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
   margin-top: 2px;
 }
+
+/* ======================================================== */
+/* INTERACTIVE DRAG & DROP SEAT EDITOR                      */
+/* ======================================================== */
+.icon-btn.edit-seat-btn {
+  background: rgba(245, 158, 11, 0.15);
+  border-color: rgba(245, 158, 11, 0.4);
+  color: #fbbf24;
+}
+
+.icon-btn.edit-seat-btn:hover {
+  background: rgba(245, 158, 11, 0.3);
+  border-color: #f59e0b;
+  color: #fff;
+}
+
+.icon-btn.edit-seat-btn.active {
+  background: #f59e0b;
+  border-color: #f59e0b;
+  color: #111;
+  box-shadow: 0 0 14px rgba(245, 158, 11, 0.7);
+  animation: pulseEditBtn 1.5s infinite;
+}
+
+@keyframes pulseEditBtn {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+}
+
+/* When editor is active, every seat turns into a draggable handle */
+.draggable-seat-active {
+  cursor: grab !important;
+  user-select: none;
+  touch-action: none;
+}
+
+.draggable-seat-active:active {
+  cursor: grabbing !important;
+  transform: translate(-50%, -50%) scale(1.15) !important;
+}
+
+.draggable-seat-active .vacant-seat-marker {
+  border-color: #f59e0b !important;
+  border-width: 2px !important;
+  background: rgba(245, 158, 11, 0.25) !important;
+  box-shadow: 0 0 14px rgba(245, 158, 11, 0.5) !important;
+}
+
+.draggable-seat-active .plus-icon {
+  color: #fbbf24 !important;
+}
+
+.drag-coords-badge {
+  position: absolute;
+  top: -24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid #f59e0b;
+  color: #fbbf24;
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 1px 6px;
+  border-radius: 10px;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+  z-index: 550;
+}
+
+.drag-icon-micro {
+  color: #f59e0b;
+}
+
+/* Floating Bottom Editor Toolbar */
+.layout-editor-toolbar {
+  position: absolute;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(13, 20, 14, 0.94);
+  border: 1px solid #f59e0b;
+  border-radius: 30px;
+  padding: 8px 18px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7), 0 0 16px rgba(245, 158, 11, 0.25);
+  backdrop-filter: blur(12px);
+  z-index: 600;
+  animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.editor-status-text {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #fbbf24;
+}
+
+.editor-pulse-icon {
+  animation: spinSlow 4s linear infinite;
+}
+
+@keyframes spinSlow {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.editor-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.editor-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 14px;
+  border: 1px solid;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.editor-btn.copy-btn {
+  background: rgba(34, 197, 94, 0.2);
+  border-color: #22c55e;
+  color: #86efac;
+}
+
+.editor-btn.copy-btn:hover {
+  background: rgba(34, 197, 94, 0.4);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.editor-btn.reset-btn {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
+}
+
+.editor-btn.reset-btn:hover {
+  background: rgba(239, 68, 68, 0.3);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.editor-btn.done-btn {
+  background: #f59e0b;
+  border-color: #f59e0b;
+  color: #111;
+}
+
+.editor-btn.done-btn:hover {
+  background: #d97706;
+  border-color: #d97706;
+  transform: translateY(-1px);
+}

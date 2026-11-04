@@ -40,7 +40,7 @@ export const jungleCabinTheme = {
     // Seating positions precisely aligned to each chair in public/jungle-cabin-bg.jpg
     seats: [
       // Table Cluster 1: Left Live-Edge Table (2 Wicker Armchairs)
-      { id: 'seat-1', name: 'Left Wicker Armchair', x: 21.5, y: 80, table: 'Left Table' },
+      { id: 'seat-1', name: 'Left Wicker Armchair', x: 22.5, y: 74, table: 'Left Table' },
       { id: 'seat-2', name: 'Right Wicker Armchair', x: 35, y: 72, table: 'Left Table' },
 
       // Table Cluster 2: Center Long Dining Table (4 Wooden Chairs)

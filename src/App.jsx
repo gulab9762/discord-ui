@@ -19,7 +19,56 @@ export default function App() {
   });
 
   const theme = getTheme(themeId);
-  const seats = theme.layout.seats;
+
+  // Dynamic / customizable seats with localStorage persistence per theme
+  const [customSeats, setCustomSeats] = useState(() => {
+    try {
+      const saved = localStorage.getItem(`custom_seats_${theme.id}`);
+      if (saved) return JSON.parse(saved);
+    } catch {
+      // ignore
+    }
+    return theme.layout.seats;
+  });
+
+  // Re-sync seats whenever theme changes
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(`custom_seats_${theme.id}`);
+      if (saved) {
+        setCustomSeats(JSON.parse(saved));
+        return;
+      }
+    } catch {
+      // ignore
+    }
+    setCustomSeats(theme.layout.seats);
+  }, [theme.id]);
+
+  // Edit / Repositioning Mode Toggle
+  const [isEditMode, setIsEditMode] = useState(false);
+
+  const handleUpdateSeatPos = (seatId, newX, newY) => {
+    setCustomSeats((prev) => {
+      const updated = prev.map((s) => (s.id === seatId ? { ...s, x: newX, y: newY } : s));
+      try {
+        localStorage.setItem(`custom_seats_${theme.id}`, JSON.stringify(updated));
+      } catch {
+        // ignore
+      }
+      return updated;
+    });
+  };
+
+  const handleResetSeats = () => {
+    try {
+      localStorage.removeItem(`custom_seats_${theme.id}`);
+    } catch {
+      // ignore
+    }
+    setCustomSeats(theme.layout.seats);
+    showNotification(`Reset ${theme.name} seat coordinates to defaults! ↺`);
+  };
 
   const [members, setMembers] = useState(INITIAL_MEMBERS);
   const [staffList, setStaffList] = useState(INITIAL_STAFF);
@@ -199,6 +248,7 @@ export default function App() {
 
   // Seating interactions (synchronized across all joined players)
   const handleSeatClick = (seat) => {
+    if (isEditMode) return;
     const vacantSeatId = seat.id;
     const seatedOccupant = members.find((m) => m.seatId === vacantSeatId);
 
@@ -232,6 +282,7 @@ export default function App() {
 
   // When a member is clicked to stand up and walk out the door
   const handleMemberClick = (member) => {
+    if (isEditMode) return;
     if (leavingGuest || enteringGuest) return;
 
     // Remove from local and broadcast
@@ -251,14 +302,14 @@ export default function App() {
 
   const handleGuestArrived = (guest) => {
     setEnteringGuest(null);
-    showNotification(`${guest.name} took a seat at ${seats.find((s) => s.id === guest.seatId)?.name || 'the table'}! 🪑✨`);
+    showNotification(`${guest.name} took a seat at ${customSeats.find((s) => s.id === guest.seatId)?.name || 'the table'}! 🪑✨`);
   };
 
   // When a new test guest enters through the door
   const handleAddMember = () => {
     if (enteringGuest || leavingGuest) return;
 
-    const vacantSeats = seats.filter((s) => !members.some((m) => m.seatId === s.id));
+    const vacantSeats = customSeats.filter((s) => !members.some((m) => m.seatId === s.id));
     if (vacantSeats.length === 0) {
       showNotification('All seats around the tables are taken!');
       return;
@@ -382,6 +433,8 @@ export default function App() {
         onOpenGuide={() => setIsGuideOpen(true)}
         isEmbedded={isEmbedded}
         currentUserName={currentUser?.name}
+        isEditMode={isEditMode}
+        onToggleEditMode={() => setIsEditMode(!isEditMode)}
       />
 
       {/* Live notification toaster */}
@@ -395,6 +448,7 @@ export default function App() {
       <main className="server-stage-unified">
         <LoungeRoom
           theme={theme}
+          seats={customSeats}
           members={members}
           onSeatClick={handleSeatClick}
           onMemberClick={handleMemberClick}
@@ -405,6 +459,11 @@ export default function App() {
           staffList={staffList}
           onToggleStaffActive={handleToggleStaffActive}
           onChangeDish={handleChangeDish}
+          isEditMode={isEditMode}
+          onToggleEditMode={setIsEditMode}
+          onUpdateSeatPos={handleUpdateSeatPos}
+          onResetSeats={handleResetSeats}
+          onNotify={showNotification}
         />
       </main>
 

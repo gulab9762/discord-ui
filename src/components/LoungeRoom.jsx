@@ -1,14 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Avatar from './Avatar';
-import { ChefHat } from 'lucide-react';
+import { ChefHat, Move, Copy, RotateCcw, Check } from 'lucide-react';
 import { DoorSprite } from './sprites/FurnitureSprites';
 
 /**
  * Common, theme-agnostic 2.5D Lounge Canvas component.
- * Renders any theme's background, door placement, seat coordinates, and kitchen station dynamically.
+ * Supports interactive real-time Drag & Drop seat placement positioning!
  */
 export default function LoungeRoom({
   theme,
+  seats,
   members,
   onSeatClick,
   onMemberClick,
@@ -18,7 +19,12 @@ export default function LoungeRoom({
   onGuestDeparted,
   staffList,
   onToggleStaffActive,
-  onChangeDish
+  onChangeDish,
+  isEditMode,
+  onToggleEditMode,
+  onUpdateSeatPos,
+  onResetSeats,
+  onNotify
 }) {
   const [doorOpen, setDoorOpen] = useState(false);
   const [enteringPos, setEnteringPos] = useState(null);
@@ -34,7 +40,7 @@ export default function LoungeRoom({
   const layout = theme.layout;
   const doorConfig = layout.door;
   const chefConfig = layout.chefStation;
-  const seats = layout.seats;
+  const currentSeats = seats || layout.seats;
 
   const activeStaff = staffList?.find((s) => s.isActive) || staffList?.[0];
   const isCooking = activeStaff?.isActive;
@@ -43,7 +49,7 @@ export default function LoungeRoom({
   useEffect(() => {
     if (!enteringGuest || !roomRef.current) return;
 
-    const targetSeat = seats.find((s) => s.id === enteringGuest.targetSeatId);
+    const targetSeat = currentSeats.find((s) => s.id === enteringGuest.targetSeatId);
     if (!targetSeat) {
       if (onGuestArrived) onGuestArrived(enteringGuest);
       return;
@@ -78,13 +84,13 @@ export default function LoungeRoom({
       clearTimeout(walkTimer);
       clearTimeout(arriveTimer);
     };
-  }, [enteringGuest, seats, doorConfig]);
+  }, [enteringGuest, currentSeats, doorConfig]);
 
   // 2. DYNAMIC LEAVING ANIMATION: Seat (x%, y%) ➜ Door (spawnX, spawnY) ➜ Exit
   useEffect(() => {
     if (!leavingGuest || !roomRef.current) return;
 
-    const fromSeat = seats.find((s) => s.id === leavingGuest.fromSeatId);
+    const fromSeat = currentSeats.find((s) => s.id === leavingGuest.fromSeatId);
     const roomRect = roomRef.current.getBoundingClientRect();
 
     const startX = fromSeat
@@ -123,10 +129,51 @@ export default function LoungeRoom({
       clearTimeout(doorOpenTimer);
       clearTimeout(exitTimer);
     };
-  }, [leavingGuest, seats, doorConfig]);
+  }, [leavingGuest, currentSeats, doorConfig]);
+
+  // 3. INTERACTIVE DRAG & DROP FOR SEAT POSITIONS
+  const handleSeatMouseDown = (e, seat) => {
+    if (!isEditMode || !onUpdateSeatPos) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    const roomEl = roomRef.current;
+    if (!roomEl) return;
+
+    const onMove = (moveEvent) => {
+      const clientX = moveEvent.touches ? moveEvent.touches[0].clientX : moveEvent.clientX;
+      const clientY = moveEvent.touches ? moveEvent.touches[0].clientY : moveEvent.clientY;
+      const rect = roomEl.getBoundingClientRect();
+
+      const newX = Math.max(2, Math.min(98, ((clientX - rect.left) / rect.width) * 100));
+      const newY = Math.max(2, Math.min(98, ((clientY - rect.top) / rect.height) * 100));
+
+      onUpdateSeatPos(seat.id, Number(newX.toFixed(1)), Number(newY.toFixed(1)));
+    };
+
+    const onUp = () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+      window.removeEventListener('touchmove', onMove);
+      window.removeEventListener('touchend', onUp);
+    };
+
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    window.addEventListener('touchmove', onMove, { passive: false });
+    window.addEventListener('touchend', onUp);
+  };
+
+  const handleCopyLayoutJson = () => {
+    const formatted = JSON.stringify(currentSeats, null, 2);
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard.writeText(formatted);
+      if (onNotify) onNotify('📋 Copied updated seat coordinates JSON to clipboard!');
+    }
+  };
 
   return (
-    <div className="room jungle-cabin-full-room">
+    <div className={`room jungle-cabin-full-room ${isEditMode ? 'edit-mode-active' : ''}`}>
       {/* Theme Background Canvas with Dynamic Image */}
       <div 
         ref={roomRef} 
@@ -188,21 +235,24 @@ export default function LoungeRoom({
           </div>
         )}
 
-        {/* 3. DYNAMIC SEATING SPOTS MAPPED TO THE THEME */}
-        {seats.map((seat) => {
+        {/* 3. DYNAMIC SEATING SPOTS MAPPED TO THE THEME (DRAGGABLE IN EDIT MODE) */}
+        {currentSeats.map((seat) => {
           const occupant = members.find((m) => m.seatId === seat.id);
           const isOccupied = !!occupant;
 
           return (
             <div
               key={seat.id}
-              className={`table-seat-pinpoint ${isOccupied ? 'occupied' : 'vacant'}`}
+              className={`table-seat-pinpoint ${isOccupied ? 'occupied' : 'vacant'} ${isEditMode ? 'draggable-seat-active' : ''}`}
               style={{
                 left: `${seat.x}%`,
                 top: `${seat.y}%`,
-                zIndex: Math.round(seat.y)
+                zIndex: isEditMode ? 500 : Math.round(seat.y)
               }}
+              onMouseDown={(e) => isEditMode && handleSeatMouseDown(e, seat)}
+              onTouchStart={(e) => isEditMode && handleSeatMouseDown(e, seat)}
               onClick={() => {
+                if (isEditMode) return;
                 if (occupant) {
                   onMemberClick(occupant);
                 } else {
@@ -210,12 +260,22 @@ export default function LoungeRoom({
                 }
               }}
               data-tooltip={
-                occupant
+                isEditMode
+                  ? `Drag ${seat.name} (${seat.x}%, ${seat.y}%)`
+                  : occupant
                   ? `${occupant.name} (${occupant.role})${occupant.mood ? ` • ${occupant.mood}` : ''} • Click to stand up`
                   : `Sit at ${seat.name}`
               }
               data-tooltip-pos="top"
             >
+              {/* Coordinate Chip visible during Edit Mode */}
+              {isEditMode && (
+                <div className="drag-coords-badge">
+                  <Move size={10} className="drag-icon-micro" />
+                  <span>{seat.x}%, {seat.y}%</span>
+                </div>
+              )}
+
               {occupant ? (
                 <div className="occupant-wrap pinpoint-occupant">
                   <div className="avatar-frame">
@@ -286,6 +346,42 @@ export default function LoungeRoom({
 
             <div className="chef-name-tag">
               <span>{activeStaff.name}</span>
+            </div>
+          </div>
+        )}
+
+        {/* 5. FLOATING SEAT POSITIONING TOOLBAR (In Edit Mode) */}
+        {isEditMode && (
+          <div className="layout-editor-toolbar">
+            <div className="editor-status-text">
+              <Move size={15} className="editor-pulse-icon" />
+              <span>Drag any seat to reposition</span>
+            </div>
+            <div className="editor-actions">
+              <button 
+                className="editor-btn copy-btn"
+                onClick={handleCopyLayoutJson}
+                title="Copy coordinates JSON to clipboard"
+              >
+                <Copy size={13} />
+                <span>Copy JSON</span>
+              </button>
+              <button 
+                className="editor-btn reset-btn"
+                onClick={onResetSeats}
+                title="Reset coordinates to theme defaults"
+              >
+                <RotateCcw size={13} />
+                <span>Reset</span>
+              </button>
+              <button 
+                className="editor-btn done-btn"
+                onClick={() => onToggleEditMode(false)}
+                title="Save & Exit Positioning Mode"
+              >
+                <Check size={13} />
+                <span>Done</span>
+              </button>
             </div>
           </div>
         )}
