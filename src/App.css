@@ -37,131 +37,293 @@
   50% { transform: translateY(-20px) rotate(45deg); opacity: 0.7; }
 }
 
-/* Header Bar */
+/* ======================================================== */
+/* UNIVERSAL TOOLTIP SYSTEM (Icons only, text on hover)     */
+/* ======================================================== */
+[data-tooltip] {
+  position: relative;
+}
+
+[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%) translateY(-3px);
+  background: rgba(13, 20, 14, 0.96);
+  color: #f1f5f9;
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 5px 11px;
+  border-radius: 7px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.16s ease, transform 0.16s ease;
+  z-index: 9999;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.7), 0 0 1px rgba(74, 222, 128, 0.3);
+  border: 1px solid rgba(74, 222, 128, 0.3);
+  backdrop-filter: blur(10px);
+}
+
+[data-tooltip]::before {
+  content: '';
+  position: absolute;
+  top: calc(100% + 3px);
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 0 5px 5px 5px;
+  border-style: solid;
+  border-color: transparent transparent rgba(13, 20, 14, 0.96) transparent;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.16s ease;
+  z-index: 10000;
+  pointer-events: none;
+}
+
+[data-tooltip]:hover::after {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
+
+[data-tooltip]:hover::before {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Tooltip positioned above element */
+[data-tooltip-pos="top"]::after {
+  top: auto;
+  bottom: calc(100% + 8px);
+  transform: translateX(-50%) translateY(3px);
+}
+
+[data-tooltip-pos="top"]::before {
+  top: auto;
+  bottom: calc(100% + 3px);
+  border-width: 5px 5px 0 5px;
+  border-color: rgba(13, 20, 14, 0.96) transparent transparent transparent;
+}
+
+[data-tooltip-pos="top"]:hover::after {
+  transform: translateX(-50%) translateY(0);
+}
+
+/* Align right (for right-side icons so tooltips don't clip window) */
+[data-tooltip-align="right"]::after {
+  left: auto;
+  right: 0;
+  transform: translateY(-3px);
+}
+
+[data-tooltip-align="right"]::before {
+  left: auto;
+  right: 12px;
+  transform: none;
+}
+
+[data-tooltip-align="right"]:hover::after {
+  transform: translateY(0);
+}
+
+/* Align left (for logo/left-side items) */
+[data-tooltip-align="left"]::after {
+  left: 0;
+  transform: translateY(-3px);
+}
+
+[data-tooltip-align="left"]::before {
+  left: 12px;
+  transform: none;
+}
+
+[data-tooltip-align="left"]:hover::after {
+  transform: translateY(0);
+}
+
+/* ======================================================== */
+/* CLEAN ICON-ONLY HEADER BAR                               */
+/* ======================================================== */
 .header-bar {
   position: relative;
   z-index: 30;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 18px;
-  background-color: rgba(22, 33, 22, 0.94);
-  backdrop-filter: blur(12px);
+  padding: 8px 16px;
+  background-color: rgba(18, 28, 19, 0.94);
+  backdrop-filter: blur(14px);
   border-bottom: 1px solid rgba(74, 222, 128, 0.15);
-  flex-wrap: wrap;
-  gap: 10px;
+  gap: 12px;
 }
 
 .header-left {
-  display: flex;
-  align-items: center;
-}
-
-.logo-group {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
 .jungle-logo-wrap {
-  width: 38px;
-  height: 38px;
+  width: 36px;
+  height: 36px;
   background: linear-gradient(135deg, #15803d, #166534);
-  border-radius: 10px;
+  border-radius: 9px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: #86efac;
   box-shadow: 0 4px 10px rgba(34, 197, 94, 0.3);
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.header-title {
-  font-size: 1rem;
-  font-weight: 700;
-  color: #fff;
+.jungle-logo-wrap:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 14px rgba(34, 197, 94, 0.45);
 }
 
-.header-subtitle {
-  font-size: 0.75rem;
-  color: #86efac;
-  opacity: 0.85;
+.user-indicator-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  background: rgba(13, 20, 14, 0.6);
+  border-radius: 50%;
+  border: 1px solid rgba(74, 222, 128, 0.25);
+  cursor: pointer;
+}
+
+.user-online-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #22c55e;
+  box-shadow: 0 0 8px #22c55e;
 }
 
 .header-stats {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
-.stat-pill {
+.stat-icon-pill {
   display: flex;
   align-items: center;
   gap: 6px;
   background-color: rgba(13, 20, 14, 0.7);
   border: 1px solid rgba(74, 222, 128, 0.2);
-  border-radius: 20px;
-  padding: 4px 12px;
+  border-radius: 16px;
+  padding: 4px 10px;
   font-size: 0.8rem;
+  font-weight: 700;
+  color: #f1f5f9;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.stat-icon-pill:hover {
+  background-color: rgba(22, 36, 23, 0.9);
+  border-color: rgba(74, 222, 128, 0.4);
 }
 
 .dot {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
 }
 
-.lounge-dot { background-color: #22c55e; box-shadow: 0 0 8px #22c55e; }
-.kitchen-dot { background-color: #f97316; box-shadow: 0 0 8px #f97316; }
+.lounge-dot { background-color: #22c55e; box-shadow: 0 0 6px #22c55e; }
+.kitchen-dot { background-color: #f97316; box-shadow: 0 0 6px #f97316; }
+
+.weather-stat {
+  color: #86efac;
+}
+
+.weather-icon {
+  color: #38bdf8;
+}
 
 .header-actions {
   display: flex;
   align-items: center;
   gap: 8px;
-  flex-wrap: wrap;
 }
 
-.btn-control {
+/* Icon Buttons (Text-Free) */
+.icon-btn {
   display: flex;
   align-items: center;
-  gap: 6px;
-  background-color: #1c2b1d;
-  color: var(--text-primary);
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  background-color: #1a271b;
+  color: #cbd5e1;
   border: 1px solid rgba(74, 222, 128, 0.2);
-  border-radius: 8px;
-  padding: 6px 12px;
-  font-size: 0.8rem;
-  font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
+  outline: none;
 }
 
-.btn-control:hover {
-  background-color: #283e2a;
+.icon-btn:hover {
+  background-color: #273a28;
+  color: #fff;
+  border-color: #4ade80;
   transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
-.sound-btn.active {
+.icon-btn.sound-btn.active {
   background-color: rgba(34, 197, 94, 0.25);
   border-color: #22c55e;
   color: #4ade80;
+  box-shadow: 0 0 10px rgba(34, 197, 94, 0.35);
 }
 
-.jungle-guest-btn {
-  background: linear-gradient(135deg, rgba(34, 197, 94, 0.25), rgba(21, 128, 61, 0.2));
-  border-color: #22c55e;
+.icon-btn.guest-btn {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(21, 128, 61, 0.2));
+  border-color: rgba(34, 197, 94, 0.4);
   color: #86efac;
 }
 
-.cook-toggle-btn {
-  background: linear-gradient(135deg, rgba(249, 115, 22, 0.25), rgba(234, 88, 12, 0.15));
-  border-color: #ea580c;
+.icon-btn.guest-btn:hover {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.35), rgba(21, 128, 61, 0.35));
+  border-color: #22c55e;
+  color: #fff;
+}
+
+.icon-btn.cook-btn {
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.2), rgba(234, 88, 12, 0.15));
+  border-color: rgba(234, 88, 12, 0.4);
   color: #fdba74;
 }
 
-.help-btn {
-  background-color: rgba(88, 101, 242, 0.2);
+.icon-btn.cook-btn:hover {
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.35), rgba(234, 88, 12, 0.25));
+  border-color: #f97316;
+  color: #fff;
+}
+
+.icon-btn.mic-btn:hover {
+  border-color: #38bdf8;
+  color: #38bdf8;
+}
+
+.icon-btn.help-btn {
+  background-color: rgba(88, 101, 242, 0.15);
+  border-color: rgba(88, 101, 242, 0.4);
+  color: #a5b4fc;
+}
+
+.icon-btn.help-btn:hover {
+  background-color: rgba(88, 101, 242, 0.3);
   border-color: #5865f2;
-  color: #93a2f8;
+  color: #fff;
 }
 
 /* Toast Notification */
@@ -299,29 +461,29 @@
 }
 
 .vacant-seat-marker {
-  width: 52px;
-  height: 52px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
-  background: rgba(13, 20, 14, 0.5);
-  border: 2px dashed rgba(74, 222, 128, 0.5);
+  background: rgba(13, 20, 14, 0.45);
+  border: 2px dashed rgba(74, 222, 128, 0.45);
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  backdrop-filter: blur(2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(3px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
   transition: all 0.2s ease;
 }
 
 .vacant-seat-marker:hover {
-  background: rgba(34, 197, 94, 0.25);
+  background: rgba(34, 197, 94, 0.3);
   border-color: #4ade80;
   border-style: solid;
-  transform: scale(1.05);
+  transform: scale(1.1);
+  box-shadow: 0 0 12px rgba(34, 197, 94, 0.5);
 }
 
 .plus-icon {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: bold;
   color: #4ade80;
   line-height: 1;
@@ -468,6 +630,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.chef-avatar-wrapper:hover {
+  transform: scale(1.05);
 }
 
 .chef-hat-floater {
@@ -502,18 +670,25 @@
 
 .integrated-dish-bubble {
   position: absolute;
-  top: -28px;
-  background-color: #f59e0b;
-  color: #111;
-  font-size: 0.65rem;
-  font-weight: 800;
-  padding: 3px 8px;
-  border-radius: 12px;
-  white-space: nowrap;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+  top: -26px;
+  background: rgba(245, 158, 11, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
   cursor: pointer;
   z-index: 12;
   animation: popIn 0.3s ease;
+  transition: transform 0.2s ease;
+}
+
+.integrated-dish-bubble:hover {
+  transform: scale(1.18);
 }
 
 .cooking-sizzle-badge {

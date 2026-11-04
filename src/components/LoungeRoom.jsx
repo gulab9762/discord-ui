@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Avatar from './Avatar';
-import { ChefHat, Flame, Coffee, Sparkles } from 'lucide-react';
+import { ChefHat } from 'lucide-react';
 import { DoorSprite } from './sprites/FurnitureSprites';
 
 export default function LoungeRoom({
@@ -106,7 +106,7 @@ export default function LoungeRoom({
       if (onGuestDeparted) {
         onGuestDeparted(leavingGuest);
       }
-    }, 1600);
+    }, 1500);
 
     return () => {
       clearTimeout(walkTimer);
@@ -117,23 +117,7 @@ export default function LoungeRoom({
 
   return (
     <div className="room jungle-cabin-full-room">
-      {/* Room Header */}
-      <div className="room-banner jungle-banner">
-        <div className="room-title-wrap">
-          <span className="room-emoji">🌴</span>
-          <div>
-            <h3>The Jungle Cabin Lounge & Outpost Kitchen</h3>
-            <span className="room-desc">
-              All-in-one panoramic cabin • Door on left, wooden tables in center, chef station on right
-            </span>
-          </div>
-        </div>
-        <div className="cabin-weather-tag">
-          <span>🌧️ 24°C Rainforest Canopy</span>
-        </div>
-      </div>
-
-      {/* The Single Panoramic Jungle Cabin Scene */}
+      {/* The Single Panoramic Jungle Cabin Scene (Full Height, No Cluttering Sub-Banner) */}
       <div ref={roomRef} className="jungle-unified-canvas">
         {/* 1. ENTRANCE DOOR (Top-Left Hotspot) */}
         <div
@@ -141,7 +125,7 @@ export default function LoungeRoom({
           className="door-hotspot"
           style={{ left: '6%', top: '24%' }}
           onClick={() => setDoorOpen(!doorOpen)}
-          title="Cabin Entrance Door - Click to toggle"
+          data-tooltip={doorOpen ? 'Entrance Door (Open)' : 'Entrance Door (Click to toggle)'}
         >
           <DoorSprite isOpen={doorOpen} />
         </div>
@@ -153,16 +137,12 @@ export default function LoungeRoom({
             style={{
               transform: `translate3d(${enteringPos.x}px, ${enteringPos.y}px, 0)`
             }}
+            data-tooltip={`${enteringGuest.name} entering`}
+            data-tooltip-pos="top"
           >
-            <div className="walker-speech-bubble entering">
-              <span>Entering... 👋</span>
-            </div>
             <div className="walker-avatar-body">
               <Avatar src={enteringGuest.avatar} name={enteringGuest.name} size={48} />
               <div className="walking-shadow"></div>
-            </div>
-            <div className="walker-name-tag">
-              <span>{enteringGuest.name}</span>
             </div>
           </div>
         )}
@@ -173,16 +153,12 @@ export default function LoungeRoom({
             style={{
               transform: `translate3d(${leavingPos.x}px, ${leavingPos.y}px, 0)`
             }}
+            data-tooltip={`${leavingGuest.name} leaving`}
+            data-tooltip-pos="top"
           >
-            <div className="walker-speech-bubble leaving">
-              <span>Leaving... Bye! 👋</span>
-            </div>
             <div className="walker-avatar-body">
               <Avatar src={leavingGuest.avatar} name={leavingGuest.name} size={48} />
               <div className="walking-shadow"></div>
-            </div>
-            <div className="walker-name-tag">
-              <span>{leavingGuest.name}</span>
             </div>
           </div>
         )}
@@ -207,46 +183,24 @@ export default function LoungeRoom({
                   onSeatClick(seat);
                 }
               }}
-              title={
+              data-tooltip={
                 occupant
-                  ? `${occupant.name} (${occupant.role}) - Click to have them leave via the door`
-                  : `Empty ${seat.name} - Click to sit at the wooden table!`
+                  ? `${occupant.name} (${occupant.role})${occupant.mood ? ` • ${occupant.mood}` : ''} • Click to stand up`
+                  : `Sit at ${seat.name}`
               }
+              data-tooltip-pos="top"
             >
               {occupant ? (
                 <div className="occupant-wrap pinpoint-occupant">
                   <div className="avatar-frame">
                     {occupant.isSpeaking && <div className="speaking-wave-ring"></div>}
                     <Avatar src={occupant.avatar} name={occupant.name} size={46} />
-                    <span className={`status-indicator ${occupant.status}`}></span>
+                    <span className={`status-indicator ${occupant.status || 'online'}`}></span>
                   </div>
-
-                  <div className="member-label">
-                    <span className="member-name" title={occupant.name}>
-                      {occupant.name}
-                    </span>
-                    <span
-                      className="role-badge"
-                      style={{
-                        backgroundColor: `${occupant.roleColor}25`,
-                        color: occupant.roleColor,
-                        borderColor: occupant.roleColor
-                      }}
-                    >
-                      {occupant.role}
-                    </span>
-                  </div>
-
-                  {occupant.mood && (
-                    <div className="mood-bubble" title={occupant.mood}>
-                      {occupant.mood}
-                    </div>
-                  )}
                 </div>
               ) : (
                 <div className="vacant-seat-marker">
                   <span className="plus-icon">+</span>
-                  <span className="marker-label">Sit Here</span>
                 </div>
               )}
             </div>
@@ -258,30 +212,36 @@ export default function LoungeRoom({
           <div
             className={`chef-station-hotspot ${isCooking ? 'cooking-mode' : 'break-mode'}`}
             style={{
-              left: isCooking ? '88%' : '88%',
+              left: '88%',
               top: isCooking ? '48%' : '72%'
             }}
           >
             {/* Chef Hat when cooking */}
             {isCooking && (
-              <div className="chef-hat-floater">
+              <div className="chef-hat-floater" data-tooltip="Head Chef on duty" data-tooltip-pos="top">
                 <ChefHat size={28} className="chef-hat-icon" />
               </div>
             )}
 
-            {/* Cooking Dish Bubble */}
+            {/* Cooking Dish Bubble: Icon Only, text on hover */}
             {isCooking && (
               <div
                 className="integrated-dish-bubble"
                 onClick={() => onChangeDish(activeStaff.id)}
-                title="Click to cycle meal recipe"
+                data-tooltip={`Cooking: ${activeStaff.cookingDish} (Click to change dish)`}
+                data-tooltip-pos="top"
               >
-                <span>🍳 Cooking: {activeStaff.cookingDish}</span>
+                <span className="dish-icon-only">{activeStaff.dishIcon || '🥘'}</span>
               </div>
             )}
 
-            {/* Chef Avatar with Spatula */}
-            <div className="chef-avatar-wrapper">
+            {/* Chef Avatar with Tooltip & Toggle on Click */}
+            <div 
+              className="chef-avatar-wrapper"
+              onClick={() => onToggleStaffActive(activeStaff.id)}
+              data-tooltip={`${activeStaff.name} (Chef) • ${isCooking ? 'Cooking at stove' : 'On break'} (Click to toggle)`}
+              data-tooltip-pos="top"
+            >
               {activeStaff.isSpeaking && (
                 <div className="speaking-wave-ring staff-ring"></div>
               )}
@@ -292,21 +252,6 @@ export default function LoungeRoom({
                   <span className="spatula-emoji">🥄</span>
                 </div>
               )}
-
-              <span className="cooking-sizzle-badge">
-                {isCooking ? 'Chef :D' : 'Break ☕'}
-              </span>
-            </div>
-
-            <div className="staff-info compact-staff-info">
-              <span className="staff-name">{activeStaff.name}</span>
-              <button
-                className="toggle-duty-btn mini-toggle"
-                onClick={() => onToggleStaffActive(activeStaff.id)}
-                title={isCooking ? 'Take coffee break' : 'Start cooking at stove'}
-              >
-                {isCooking ? 'Take Break ☕' : 'Cook :D 🍳'}
-              </button>
             </div>
           </div>
         )}
