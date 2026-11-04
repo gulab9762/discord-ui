@@ -2,13 +2,25 @@ import React, { useState, useEffect, useRef } from 'react';
 import Header from './components/Header';
 import LoungeRoom from './components/LoungeRoom';
 import SetupGuideModal from './components/SetupGuideModal';
-import { INITIAL_SEATS, INITIAL_MEMBERS, INITIAL_STAFF, COOKING_DISHES } from './data/mockData';
+import { INITIAL_MEMBERS, INITIAL_STAFF } from './data/mockData';
 import { discordService, formatDiscordUser, getStoredDiscordUser, saveStoredDiscordUser } from './services/discordSdk';
 import { syncService } from './services/syncService';
+import { THEME_LIST, getTheme, DEFAULT_THEME_ID } from './themes';
 import './App.css';
 
 export default function App() {
-  const [seats] = useState(INITIAL_SEATS);
+  // Active Theme Selection
+  const [themeId, setThemeId] = useState(() => {
+    try {
+      return localStorage.getItem('discord_active_theme') || DEFAULT_THEME_ID;
+    } catch {
+      return DEFAULT_THEME_ID;
+    }
+  });
+
+  const theme = getTheme(themeId);
+  const seats = theme.layout.seats;
+
   const [members, setMembers] = useState(INITIAL_MEMBERS);
   const [staffList, setStaffList] = useState(INITIAL_STAFF);
   const [isGuideOpen, setIsGuideOpen] = useState(false);
@@ -18,9 +30,33 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState(getStoredDiscordUser());
   const [enteringGuest, setEnteringGuest] = useState(null);
   const [leavingGuest, setLeavingGuest] = useState(null);
-  const [notification, setNotification] = useState('Welcome to the Jungle Cabin Lounge! 🌴');
+  const [notification, setNotification] = useState(`Welcome to the ${theme.name}! 🌴`);
 
   const voiceSpeakingRef = useRef(new Set());
+
+  // Apply theme CSS custom properties to document root dynamically
+  useEffect(() => {
+    const root = document.documentElement;
+    if (theme.themeVars) {
+      Object.entries(theme.themeVars).forEach(([prop, val]) => {
+        root.style.setProperty(prop, val);
+      });
+    }
+  }, [theme]);
+
+  // Cycle to next available theme
+  const handleSwitchTheme = () => {
+    const currentIndex = THEME_LIST.findIndex((t) => t.id === themeId);
+    const nextIndex = (currentIndex + 1) % THEME_LIST.length;
+    const nextTheme = THEME_LIST[nextIndex];
+    setThemeId(nextTheme.id);
+    try {
+      localStorage.setItem('discord_active_theme', nextTheme.id);
+    } catch {
+      // ignore
+    }
+    showNotification(`Switched theme to ${nextTheme.name} ${nextTheme.icon}! ✨`);
+  };
 
   // 1. Initialize Discord SDK & Multiplayer Sync
   useEffect(() => {
@@ -113,14 +149,14 @@ export default function App() {
       if (type === 'PLAYER_JOINED') {
         const player = payload?.user;
         if (player && player.id !== currentUser?.id) {
-          showNotification(`🚪 Door opened! ${player.name} joined the cabin lounge! ✨`);
+          showNotification(`🚪 Door opened! ${player.name} entered the lounge! ✨`);
         }
       }
 
       if (type === 'PLAYER_LEFT') {
         const player = payload?.user;
         if (player && player.id !== currentUser?.id) {
-          showNotification(`${player.name} left the cabin lounge. 👋`);
+          showNotification(`${player.name} left through the door. 👋`);
         }
       }
     });
@@ -210,7 +246,7 @@ export default function App() {
 
   const handleGuestDeparted = (departedGuest) => {
     setLeavingGuest(null);
-    showNotification(`${departedGuest.name} exited the cabin into the rainforest. 🚪✨`);
+    showNotification(`${departedGuest.name} exited through the door. 🚪✨`);
   };
 
   const handleGuestArrived = (guest) => {
@@ -224,13 +260,13 @@ export default function App() {
 
     const vacantSeats = seats.filter((s) => !members.some((m) => m.seatId === s.id));
     if (vacantSeats.length === 0) {
-      showNotification('All seats around the wooden tables are taken!');
+      showNotification('All seats around the tables are taken!');
       return;
     }
 
     const nextSeat = vacantSeats[0];
     const names = ['Cosmo', 'Neko', 'StarGazer', 'PixelPanda', 'CyberBoba', 'LofiGhost', 'Mochi', 'BobaCat'];
-    const moods = ['watching jungle mist 🌧️', 'sipping coconut water 🥥', 'resting on cushions 🌿', 'listening to lofi 🎧'];
+    const moods = ['relaxing in the ambiance 🌿', 'sipping a warm brew ☕', 'resting on cushions ✨', 'listening to music 🎧'];
     const roles = ['VIP', 'Booster', 'Member'];
     const colors = ['#f47fff', '#f47b67', '#3ba55d'];
 
@@ -264,7 +300,7 @@ export default function App() {
         showNotification(
           nextActive
             ? `${s.name} stepped up to the stove to cook ${s.cookingDish}! 🍳`
-            : `${s.name} sat down at the coffee counter for a break ☕`
+            : `${s.name} sat down at the counter for a break ☕`
         );
         return { ...s, isActive: nextActive };
       }
@@ -290,9 +326,10 @@ export default function App() {
   };
 
   const handleChangeDish = (staffId) => {
+    const dishes = theme.dishes;
     const updated = staffList.map((s) => {
       if (s.id === staffId) {
-        const randomDish = COOKING_DISHES[Math.floor(Math.random() * COOKING_DISHES.length)];
+        const randomDish = dishes[Math.floor(Math.random() * dishes.length)];
         showNotification(`${s.name} is now cooking ${randomDish.name} ${randomDish.icon}!`);
         return { ...s, cookingDish: randomDish.name, dishIcon: randomDish.icon };
       }
@@ -335,6 +372,8 @@ export default function App() {
 
       {/* Top Navigation & Controls */}
       <Header
+        theme={theme}
+        onSwitchTheme={handleSwitchTheme}
         membersCount={members.filter((m) => m.seatId).length}
         staffCount={staffList.length}
         onAddMember={handleAddMember}
@@ -352,10 +391,10 @@ export default function App() {
         </div>
       )}
 
-      {/* Unified Panoramic Jungle Cabin Canvas */}
+      {/* Dynamic 2.5D Lounge Canvas mapped to active theme */}
       <main className="server-stage-unified">
         <LoungeRoom
-          seats={seats}
+          theme={theme}
           members={members}
           onSeatClick={handleSeatClick}
           onMemberClick={handleMemberClick}

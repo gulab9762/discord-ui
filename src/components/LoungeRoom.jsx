@@ -3,8 +3,12 @@ import Avatar from './Avatar';
 import { ChefHat } from 'lucide-react';
 import { DoorSprite } from './sprites/FurnitureSprites';
 
+/**
+ * Common, theme-agnostic 2.5D Lounge Canvas component.
+ * Renders any theme's background, door placement, seat coordinates, and kitchen station dynamically.
+ */
 export default function LoungeRoom({
-  seats,
+  theme,
   members,
   onSeatClick,
   onMemberClick,
@@ -26,10 +30,16 @@ export default function LoungeRoom({
   const roomRef = useRef(null);
   const doorRef = useRef(null);
 
+  // Dynamic theme layout definitions
+  const layout = theme.layout;
+  const doorConfig = layout.door;
+  const chefConfig = layout.chefStation;
+  const seats = layout.seats;
+
   const activeStaff = staffList?.find((s) => s.isActive) || staffList?.[0];
   const isCooking = activeStaff?.isActive;
 
-  // 1. ENTERING ANIMATION: Door (6%, 36%) ➜ Seat (x%, y%)
+  // 1. DYNAMIC ENTERING ANIMATION: Door (spawnX, spawnY) ➜ Seat (x%, y%)
   useEffect(() => {
     if (!enteringGuest || !roomRef.current) return;
 
@@ -40,11 +50,11 @@ export default function LoungeRoom({
     }
 
     const roomRect = roomRef.current.getBoundingClientRect();
-    const startX = (roomRect.width * 0.07);
-    const startY = (roomRect.height * 0.38);
+    const startX = roomRect.width * (doorConfig.spawnOffsetX / 100);
+    const startY = roomRect.height * (doorConfig.spawnOffsetY / 100);
 
-    const targetX = (roomRect.width * (targetSeat.x / 100)) - 24;
-    const targetY = (roomRect.height * (targetSeat.y / 100)) - 24;
+    const targetX = roomRect.width * (targetSeat.x / 100) - 24;
+    const targetY = roomRect.height * (targetSeat.y / 100) - 24;
 
     setDoorOpen(true);
     setEnteringPos({ x: startX, y: startY });
@@ -68,9 +78,9 @@ export default function LoungeRoom({
       clearTimeout(walkTimer);
       clearTimeout(arriveTimer);
     };
-  }, [enteringGuest]);
+  }, [enteringGuest, seats, doorConfig]);
 
-  // 2. LEAVING ANIMATION: Seat (x%, y%) ➜ Door (6%, 36%) ➜ Exit
+  // 2. DYNAMIC LEAVING ANIMATION: Seat (x%, y%) ➜ Door (spawnX, spawnY) ➜ Exit
   useEffect(() => {
     if (!leavingGuest || !roomRef.current) return;
 
@@ -78,14 +88,14 @@ export default function LoungeRoom({
     const roomRect = roomRef.current.getBoundingClientRect();
 
     const startX = fromSeat
-      ? (roomRect.width * (fromSeat.x / 100)) - 24
-      : (roomRect.width * 0.4);
+      ? roomRect.width * (fromSeat.x / 100) - 24
+      : roomRect.width * 0.4;
     const startY = fromSeat
-      ? (roomRect.height * (fromSeat.y / 100)) - 24
-      : (roomRect.height * 0.6);
+      ? roomRect.height * (fromSeat.y / 100) - 24
+      : roomRect.height * 0.6;
 
-    const targetX = (roomRect.width * 0.07);
-    const targetY = (roomRect.height * 0.38);
+    const targetX = roomRect.width * (doorConfig.spawnOffsetX / 100);
+    const targetY = roomRect.height * (doorConfig.spawnOffsetY / 100);
 
     setLeavingPos({ x: startX, y: startY });
     setIsLeavingWalking(false);
@@ -113,17 +123,26 @@ export default function LoungeRoom({
       clearTimeout(doorOpenTimer);
       clearTimeout(exitTimer);
     };
-  }, [leavingGuest]);
+  }, [leavingGuest, seats, doorConfig]);
 
   return (
     <div className="room jungle-cabin-full-room">
-      {/* The Single Panoramic Jungle Cabin Scene (Full Height, No Cluttering Sub-Banner) */}
-      <div ref={roomRef} className="jungle-unified-canvas">
-        {/* 1. ENTRANCE DOOR (Top-Left Hotspot) */}
+      {/* Theme Background Canvas with Dynamic Image */}
+      <div 
+        ref={roomRef} 
+        className="jungle-unified-canvas"
+        style={{
+          backgroundImage: `url('${theme.background}')`
+        }}
+      >
+        {/* 1. ENTRANCE DOOR (Positioned from active theme) */}
         <div
           ref={doorRef}
           className="door-hotspot"
-          style={{ left: '6%', top: '24%' }}
+          style={{
+            left: `${doorConfig.x}%`,
+            top: `${doorConfig.y}%`
+          }}
           onClick={() => setDoorOpen(!doorOpen)}
           data-tooltip={doorOpen ? 'Entrance Door (Open)' : 'Entrance Door (Click to toggle)'}
         >
@@ -169,7 +188,7 @@ export default function LoungeRoom({
           </div>
         )}
 
-        {/* 3. SEATING SPOTS MAPPED DIRECTLY TO THE WOODEN TABLES */}
+        {/* 3. DYNAMIC SEATING SPOTS MAPPED TO THE THEME */}
         {seats.map((seat) => {
           const occupant = members.find((m) => m.seatId === seat.id);
           const isOccupied = !!occupant;
@@ -203,7 +222,6 @@ export default function LoungeRoom({
                     <Avatar src={occupant.avatar} name={occupant.name} size={46} />
                     <span className={`status-indicator ${occupant.status || 'online'}`}></span>
                   </div>
-                  {/* Preserved Username Badge */}
                   <div className="member-name">
                     <span>{occupant.name}</span>
                   </div>
@@ -217,13 +235,13 @@ export default function LoungeRoom({
           );
         })}
 
-        {/* 4. INTEGRATED KITCHEN / CHEF CORNER (Far-Right of the Cabin) */}
+        {/* 4. DYNAMIC CHEF CORNER (Positioned from active theme) */}
         {activeStaff && (
           <div
             className={`chef-station-hotspot ${isCooking ? 'cooking-mode' : 'break-mode'}`}
             style={{
-              left: '88%',
-              top: isCooking ? '48%' : '72%'
+              left: `${isCooking ? chefConfig.cooking.x : chefConfig.break.x}%`,
+              top: `${isCooking ? chefConfig.cooking.y : chefConfig.break.y}%`
             }}
           >
             {/* Chef Hat when cooking */}
@@ -233,7 +251,7 @@ export default function LoungeRoom({
               </div>
             )}
 
-            {/* Cooking Dish Bubble: Icon Only, text on hover */}
+            {/* Cooking Dish Bubble */}
             {isCooking && (
               <div
                 className="integrated-dish-bubble"
@@ -241,11 +259,11 @@ export default function LoungeRoom({
                 data-tooltip={`Cooking: ${activeStaff.cookingDish} (Click to change dish)`}
                 data-tooltip-pos="top"
               >
-                <span className="dish-icon-only">{activeStaff.dishIcon || '🥘'}</span>
+                <span className="dish-icon-only">{activeStaff.dishIcon || '🍳'}</span>
               </div>
             )}
 
-            {/* Chef Avatar with Tooltip & Toggle on Click */}
+            {/* Chef Avatar with Toggle */}
             <div 
               className="chef-avatar-wrapper"
               onClick={() => onToggleStaffActive(activeStaff.id)}
@@ -264,14 +282,13 @@ export default function LoungeRoom({
               )}
             </div>
 
-            {/* Preserved Chef Username Badge */}
             <div className="chef-name-tag">
               <span>{activeStaff.name}</span>
             </div>
           </div>
         )}
 
-        {/* Ambient Warm Golden Overlay */}
+        {/* Ambient Overlay with Theme Vignette */}
         <div className="jungle-vignette-overlay"></div>
       </div>
     </div>

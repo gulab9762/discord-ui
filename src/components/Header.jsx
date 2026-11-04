@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { Volume2, VolumeX, UserPlus, Flame, Mic, HelpCircle, Trees, CloudRain } from 'lucide-react';
+import { Volume2, VolumeX, UserPlus, Flame, Mic, HelpCircle, Palette, CloudRain } from 'lucide-react';
 import { ambientAudio } from '../services/ambientAudio';
 
 export default function Header({
+  theme,
+  onSwitchTheme,
   membersCount,
   staffCount,
   onAddMember,
@@ -20,10 +22,10 @@ export default function Header({
   };
 
   const userTooltip = currentUserName
-    ? `Logged in: ${currentUserName} • Misty Rainforest Retreat`
+    ? `Logged in: ${currentUserName} • ${theme.name}`
     : isEmbedded
-    ? 'Connected via Discord Activity'
-    : 'Preview Mode • Rainforest Retreat';
+    ? `Connected via Discord Activity • ${theme.name}`
+    : `Preview Mode • ${theme.name}`;
 
   return (
     <header className="header-bar jungle-header-bar">
@@ -31,10 +33,10 @@ export default function Header({
       <div className="header-left">
         <div 
           className="logo-icon-wrap jungle-logo-wrap"
-          data-tooltip="The Jungle Cabin Lounge"
+          data-tooltip={theme.name}
           data-tooltip-align="left"
         >
-          <Trees className="logo-icon" size={20} />
+          <span style={{ fontSize: '18px' }}>{theme.icon || '🌴'}</span>
         </div>
 
         {currentUserName && (
@@ -69,7 +71,7 @@ export default function Header({
 
         <div 
           className="stat-icon-pill weather-stat"
-          data-tooltip="24°C Rainforest Canopy • Gentle Rain 🌧️"
+          data-tooltip={theme.weather || 'Atmospheric Ambience 🌧️'}
         >
           <CloudRain size={16} className="weather-icon" />
         </div>
@@ -77,10 +79,21 @@ export default function Header({
 
       {/* Action Buttons (Icons Only) */}
       <div className="header-actions">
+        {/* Theme Switcher Button */}
+        <button
+          className="icon-btn theme-switch-btn"
+          onClick={onSwitchTheme}
+          data-tooltip={`Theme: ${theme.name} (Click to switch)`}
+          data-tooltip-align="right"
+          aria-label="Switch Theme"
+        >
+          <Palette size={18} />
+        </button>
+
         <button 
           className={`icon-btn sound-btn ${soundEnabled ? 'active' : ''}`}
           onClick={handleSoundToggle}
-          data-tooltip={soundEnabled ? 'Mute Rainforest Audio' : 'Play Rainforest Audio'}
+          data-tooltip={soundEnabled ? 'Mute Ambient Audio' : 'Play Ambient Audio'}
           data-tooltip-align="right"
           aria-label="Toggle Audio"
         >
