@@ -5,7 +5,7 @@ export const cozyTavernTheme = {
   id: 'cozy-tavern',
   name: 'Warm Hearth Tavern',
   icon: '🪵',
-  background: '/jungle-cabin-bg.jpg', // can share backdrop or have dedicated image
+  background: '/jungle-cabin-bg.jpg',
   weather: '18°C Mountain Evening • Crackling Hearth 🔥',
 
   themeVars: {
@@ -23,22 +23,24 @@ export const cozyTavernTheme = {
     door: {
       x: 6,
       y: 24,
-      spawnOffsetX: 7,
-      spawnOffsetY: 38
+      spawnOffsetX: 12,
+      spawnOffsetY: 72
     },
     chefStation: {
-      cooking: { x: 88, y: 48 },
-      break: { x: 88, y: 72 }
+      cooking: { x: 89, y: 66 },
+      break: { x: 78, y: 66 }
     },
     seats: [
-      { id: 'seat-1', name: 'Oak Hearth Chair', x: 20, y: 65, table: 'Fireplace Table' },
-      { id: 'seat-2', name: 'Leather Bench', x: 32, y: 62, table: 'Fireplace Table' },
-      { id: 'seat-3', name: 'Wool Footstool', x: 26, y: 80, table: 'Fireplace Table' },
-      { id: 'seat-4', name: 'Tavern Longbench L', x: 44, y: 56, table: 'Feast Hall' },
-      { id: 'seat-5', name: 'Tavern Longbench R', x: 54, y: 56, table: 'Feast Hall' },
-      { id: 'seat-6', name: 'Bar Stool Center', x: 49, y: 76, table: 'Feast Hall' },
-      { id: 'seat-7', name: 'Corner Booth Left', x: 68, y: 64, table: 'Corner Booth' },
-      { id: 'seat-8', name: 'Corner Booth Right', x: 78, y: 66, table: 'Corner Booth' }
+      { id: 'seat-1', name: 'Oak Hearth Chair', x: 21.5, y: 74, table: 'Fireplace Table' },
+      { id: 'seat-2', name: 'Wicker Fireside Seat', x: 35, y: 72, table: 'Fireplace Table' },
+      { id: 'seat-3', name: 'Tavern Longbench Left', x: 42.5, y: 68, table: 'Feast Hall' },
+      { id: 'seat-4', name: 'Tavern Longbench Right', x: 55.5, y: 68, table: 'Feast Hall' },
+      { id: 'seat-5', name: 'Front Pew Left', x: 41.5, y: 84, table: 'Feast Hall' },
+      { id: 'seat-6', name: 'Front Pew Right', x: 57, y: 84, table: 'Feast Hall' },
+      { id: 'seat-7', name: 'Corner Booth Seat A', x: 60, y: 70, table: 'Corner Booth' },
+      { id: 'seat-8', name: 'Corner Booth Seat B', x: 70, y: 70, table: 'Corner Booth' },
+      { id: 'seat-9', name: 'Tavern Master Chair', x: 72, y: 85, table: 'Corner Booth' },
+      { id: 'seat-10', name: 'Taproom Bar Stool', x: 89, y: 92, table: 'Taproom Bar' }
     ]
   },
 

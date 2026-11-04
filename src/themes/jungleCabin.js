@@ -1,6 +1,6 @@
 /**
  * Theme configuration for the Jungle Cabin Lounge
- * Encapsulates all layout coordinates, assets, seating pinpoints, and recipes.
+ * Precision-mapped to the actual visual furniture, wooden chairs, tables, and kitchen range in public/jungle-cabin-bg.jpg.
  */
 export const jungleCabinTheme = {
   id: 'jungle-cabin',
@@ -27,31 +27,35 @@ export const jungleCabinTheme = {
     door: {
       x: 6,
       y: 24,
-      spawnOffsetX: 7,
-      spawnOffsetY: 38
+      spawnOffsetX: 12,
+      spawnOffsetY: 72
     },
 
-    // Chef cooking hotspot coordinates
+    // Chef cooking hotspot coordinates (aligned to the actual stove and espresso bar)
     chefStation: {
-      cooking: { x: 88, y: 48 },
-      break: { x: 88, y: 72 }
+      cooking: { x: 89, y: 66 }, // Right in front of the stove range
+      break: { x: 78, y: 66 }     // At the coffee espresso counter
     },
 
-    // Seating positions mapped across the scene
+    // Seating positions precisely aligned to each chair in public/jungle-cabin-bg.jpg
     seats: [
-      // Table Cluster 1 (Left Timber Table)
-      { id: 'seat-1', name: 'Cedar Armchair', x: 18, y: 64, table: 'Left Table' },
-      { id: 'seat-2', name: 'Wicker Chair', x: 30, y: 62, table: 'Left Table' },
-      { id: 'seat-3', name: 'Floor Cushion', x: 24, y: 78, table: 'Left Table' },
+      // Table Cluster 1: Left Live-Edge Table (2 Wicker Armchairs)
+      { id: 'seat-1', name: 'Left Wicker Armchair', x: 21.5, y: 80, table: 'Left Table' },
+      { id: 'seat-2', name: 'Right Wicker Armchair', x: 35, y: 72, table: 'Left Table' },
 
-      // Table Cluster 2 (Center Low Table)
-      { id: 'seat-4', name: 'Timber Chair', x: 43, y: 56, table: 'Center Table' },
-      { id: 'seat-5', name: 'Carved Wood Seat', x: 53, y: 56, table: 'Center Table' },
-      { id: 'seat-6', name: 'Cozy Floor Pillow', x: 48, y: 76, table: 'Center Table' },
+      // Table Cluster 2: Center Long Dining Table (4 Wooden Chairs)
+      { id: 'seat-3', name: 'Back-Left Dining Chair', x: 42.5, y: 68, table: 'Center Table' },
+      { id: 'seat-4', name: 'Back-Right Dining Chair', x: 55.5, y: 68, table: 'Center Table' },
+      { id: 'seat-5', name: 'Front-Left Dining Chair', x: 41.5, y: 84, table: 'Center Table' },
+      { id: 'seat-6', name: 'Front-Right Dining Chair', x: 57, y: 84, table: 'Center Table' },
 
-      // Table Cluster 3 (Right Lounge Area)
-      { id: 'seat-7', name: 'Rattan Armchair', x: 67, y: 63, table: 'Right Table' },
-      { id: 'seat-8', name: 'Moss Lounge Seat', x: 77, y: 65, table: 'Right Table' }
+      // Table Cluster 3: Right Stump Lounge Area (3 Armchairs)
+      { id: 'seat-7', name: 'Stump Lounge Left Chair', x: 60, y: 70, table: 'Right Table' },
+      { id: 'seat-8', name: 'Stump Lounge Right Chair', x: 70, y: 70, table: 'Right Table' },
+      { id: 'seat-9', name: 'Foreground Timber Armchair', x: 72, y: 85, table: 'Right Table' },
+
+      // Kitchen Island Counter Bar Stool
+      { id: 'seat-10', name: 'Kitchen Counter Stool', x: 89, y: 92, table: 'Kitchen Bar' }
     ]
   },
 

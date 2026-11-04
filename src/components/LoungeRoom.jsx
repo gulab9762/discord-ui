@@ -199,7 +199,8 @@ export default function LoungeRoom({
               className={`table-seat-pinpoint ${isOccupied ? 'occupied' : 'vacant'}`}
               style={{
                 left: `${seat.x}%`,
-                top: `${seat.y}%`
+                top: `${seat.y}%`,
+                zIndex: Math.round(seat.y)
               }}
               onClick={() => {
                 if (occupant) {
@@ -241,7 +242,8 @@ export default function LoungeRoom({
             className={`chef-station-hotspot ${isCooking ? 'cooking-mode' : 'break-mode'}`}
             style={{
               left: `${isCooking ? chefConfig.cooking.x : chefConfig.break.x}%`,
-              top: `${isCooking ? chefConfig.cooking.y : chefConfig.break.y}%`
+              top: `${isCooking ? chefConfig.cooking.y : chefConfig.break.y}%`,
+              zIndex: 70
             }}
           >
             {/* Chef Hat when cooking */}

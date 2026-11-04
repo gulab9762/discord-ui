@@ -16,3 +16,4 @@ export const DEFAULT_THEME_ID = jungleCabinTheme.id;
 export function getTheme(themeId) {
   return THEMES[themeId] || jungleCabinTheme;
 }
+
